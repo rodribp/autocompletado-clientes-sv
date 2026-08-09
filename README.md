@@ -1,0 +1,2 @@
+### La información de mis clientes
+Esta extensión te permite guardar y administrar en un solo lugar y localmente la información fiscal de tus clientes para ahorrar tiempo al rellenar el formulario de creación de facturas y créditos fiscales en admin.factura.gob.sv
