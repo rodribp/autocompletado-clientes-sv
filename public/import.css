@@ -1,0 +1,168 @@
+/* Only overrides what popup.css assumes about a 400px window. */
+
+body.page {
+  width: auto;
+  max-height: none;
+  padding: 0 0 32px;
+}
+
+.page .topbar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.sheet {
+  max-width: 620px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+/* popup.css stretches every control to 100%; not wanted for radios here. */
+.sheet input[type='radio'] {
+  width: auto;
+  margin: 2px 0 0;
+}
+
+.dropzone {
+  margin-top: 20px;
+  padding: 32px 16px;
+  border: 2px dashed var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  text-align: center;
+}
+
+.dropzone.dragover {
+  border-color: var(--primary);
+  border-style: solid;
+}
+
+.dropzone-text {
+  margin: 0;
+  font-size: 14px;
+}
+
+.dropzone-or {
+  margin: 8px 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.counts {
+  display: flex;
+  gap: 8px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.counts li {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.counts b {
+  display: block;
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.counts span {
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+.mode {
+  margin: 16px 0 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.mode legend {
+  padding: 0 4px;
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+.option {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 5px 0;
+  cursor: pointer;
+}
+
+.option b {
+  display: block;
+  font-weight: 600;
+}
+
+.option em {
+  color: var(--muted);
+  font-size: 11.5px;
+  font-style: normal;
+}
+
+.preview-details {
+  margin-top: 16px;
+}
+
+.preview-details details {
+  margin-bottom: 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.preview-details summary {
+  padding: 8px 10px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.preview-details ul {
+  margin: 0;
+  padding: 0 10px 8px;
+  max-height: 260px;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.preview-details li {
+  padding: 5px 0;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+}
+
+.preview-details .doc {
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+.preview-details .overwritten {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+.preview-details .arrow {
+  color: var(--muted);
+  padding: 0 4px;
+}
+
+.page .actions {
+  padding-top: 16px;
+}
+
+.done {
+  margin: 20px 0 0;
+  padding: 14px 16px;
+  border: 1px solid var(--primary);
+  border-radius: var(--radius);
+  background: var(--ok-bg);
+}

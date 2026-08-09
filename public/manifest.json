@@ -1,0 +1,36 @@
+{
+  "manifest_version": 3,
+  "name": "Autocompletado de clientes — factura.gob.sv",
+  "version": "0.1.0",
+  "description": "Guarda la información fiscal de tus clientes y rellena el receptor de facturas y créditos fiscales con un clic.",
+  "minimum_chrome_version": "102",
+  "permissions": ["storage", "scripting"],
+  "host_permissions": ["https://admin.factura.gob.sv/*"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Clientes",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://admin.factura.gob.sv/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ]
+}

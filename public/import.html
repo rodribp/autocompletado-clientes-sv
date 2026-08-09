@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Importar respaldo — Clientes</title>
+    <!-- popup.css provides colors and buttons; import.css only what differs in a tab. -->
+    <link rel="stylesheet" href="popup.css" />
+    <link rel="stylesheet" href="import.css" />
+  </head>
+  <body class="page">
+    <header class="topbar">
+      <h1>Importar respaldo</h1>
+    </header>
+
+    <main class="sheet">
+      <p id="error" class="banner" hidden></p>
+
+      <section id="step-choose">
+        <div id="dropzone" class="dropzone">
+          <p class="dropzone-text">Arrastra aquí tu respaldo <b>.json</b></p>
+          <p class="dropzone-or">o</p>
+          <button id="btn-choose" type="button" class="primary">Elegir archivo…</button>
+        </div>
+        <p class="note">
+          Nada se guarda todavía. Primero verás qué cambiaría y tendrás que confirmarlo.
+        </p>
+      </section>
+
+      <section id="step-preview" hidden>
+        <p id="file-name" class="note"></p>
+
+        <ul class="counts">
+          <li><b id="n-added">0</b><span>se agregarían</span></li>
+          <li><b id="n-updated">0</b><span>se sobrescribirían</span></li>
+          <li id="li-skipped" hidden><b id="n-skipped">0</b><span>se descartarían</span></li>
+        </ul>
+
+        <fieldset class="mode">
+          <legend>Qué hacer con los clientes que ya tienes</legend>
+          <label class="option">
+            <input type="radio" name="mode" value="merge" checked />
+            <span>
+              <b>Combinar</b>
+              <em>Añade los nuevos y actualiza los repetidos. No se pierde nada.</em>
+            </span>
+          </label>
+          <label class="option">
+            <input type="radio" name="mode" value="replace" />
+            <span>
+              <b>Reemplazar todo</b>
+              <em>Borra tus clientes actuales y deja solo los del archivo.</em>
+            </span>
+          </label>
+        </fieldset>
+
+        <p id="replace-warning" class="note note-warn" hidden></p>
+
+        <div id="preview-details" class="preview-details"></div>
+
+        <div class="actions">
+          <button id="btn-confirm" type="button" class="primary">Importar</button>
+          <button id="btn-cancel" type="button" class="subtle">Elegir otro archivo</button>
+        </div>
+      </section>
+
+      <section id="step-done" hidden>
+        <p id="report" class="done"></p>
+        <div class="actions">
+          <button id="btn-another" type="button" class="subtle">Importar otro respaldo</button>
+          <button id="btn-close" type="button" class="primary">Cerrar</button>
+        </div>
+      </section>
+    </main>
+
+    <input id="file" type="file" accept="application/json,.json" hidden />
+
+    <script src="import.js"></script>
+  </body>
+</html>

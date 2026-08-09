@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.tmp/
+*.zip
+*.crx
+*.pem
+
+.DS_Store
+.vscode/
+.idea/

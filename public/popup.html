@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Clientes</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <h1>Clientes</h1>
+      <span id="badge" class="badge" hidden></span>
+      <div class="menu">
+        <button id="btn-menu" class="icon-btn" aria-haspopup="true" aria-expanded="false" title="Más opciones">⋯</button>
+        <div id="menu-panel" class="menu-panel" role="menu" hidden>
+          <button id="btn-export" role="menuitem">Exportar respaldo (JSON)</button>
+          <button id="btn-import" role="menuitem">Importar respaldo (JSON)</button>
+          <button id="btn-diagnose" role="menuitem">Diagnóstico</button>
+        </div>
+      </div>
+    </header>
+
+    <p id="notice" class="banner" hidden></p>
+
+    <section id="list-view">
+      <div class="toolbar">
+        <input id="search" type="search" placeholder="Buscar por nombre, NIT o NRC" autocomplete="off" />
+        <button id="btn-new" class="primary">Nuevo</button>
+      </div>
+      <button id="btn-capture" class="wide subtle" hidden>Guardar cliente actual</button>
+
+      <ul id="list" class="list"></ul>
+      <p id="empty" class="empty" hidden></p>
+    </section>
+
+    <section id="edit-view" hidden>
+      <form id="customer-form" novalidate>
+        <h2 id="edit-title">Nuevo cliente</h2>
+
+        <label class="field">
+          <span>Nombre o razón social <b aria-hidden="true">*</b></span>
+          <input name="name" type="text" maxlength="250" required />
+          <em class="error" data-error-for="name"></em>
+        </label>
+
+        <label class="field">
+          <span>Nombre comercial</span>
+          <input name="tradeName" type="text" maxlength="150" placeholder="Opcional" />
+          <em class="error" data-error-for="tradeName"></em>
+        </label>
+
+        <div class="row">
+          <label class="field">
+            <span>Tipo de documento</span>
+            <select name="docType"></select>
+          </label>
+          <label class="field">
+            <span>Número <b aria-hidden="true">*</b></span>
+            <input name="docNumber" type="text" required />
+            <em class="error" data-error-for="docNumber"></em>
+          </label>
+        </div>
+
+        <div class="row">
+          <label class="field">
+            <span>NRC</span>
+            <input name="nrc" type="text" inputmode="numeric" placeholder="123456-7" />
+            <em class="error" data-error-for="nrc"></em>
+          </label>
+          <label class="field">
+            <span>Teléfono</span>
+            <input name="phone" type="text" inputmode="tel" placeholder="2222-1234" />
+            <em class="error" data-error-for="phone"></em>
+          </label>
+        </div>
+
+        <label class="field">
+          <span>Correo electrónico</span>
+          <input name="email" type="email" maxlength="100" />
+          <em class="error" data-error-for="email"></em>
+        </label>
+
+        <div class="row">
+          <label class="field field-short">
+            <span>Código de actividad</span>
+            <input name="activityCode" type="text" inputmode="numeric" placeholder="71102" />
+            <em class="error" data-error-for="activity"></em>
+          </label>
+          <label class="field">
+            <span>Descripción de la actividad</span>
+            <input name="activityDescription" type="text" maxlength="150" />
+          </label>
+        </div>
+
+        <fieldset class="address">
+          <legend>Dirección</legend>
+          <div class="row">
+            <label class="field">
+              <span>Departamento</span>
+              <select name="department"></select>
+            </label>
+            <label class="field">
+              <span>Municipio</span>
+              <select name="municipality"></select>
+              <input name="municipalityManual" type="text" placeholder="Código" hidden />
+            </label>
+          </div>
+          <label class="field">
+            <span>Distrito</span>
+            <select name="district"></select>
+            <input name="districtManual" type="text" placeholder="Código" hidden />
+          </label>
+          <p id="catalog-notice" class="note" hidden></p>
+          <label class="field">
+            <span>Complemento</span>
+            <textarea name="details" rows="2" maxlength="200"></textarea>
+            <em class="error" data-error-for="details"></em>
+          </label>
+        </fieldset>
+
+        <label class="field">
+          <span>Notas</span>
+          <textarea name="notes" rows="2" maxlength="500"></textarea>
+          <em class="error" data-error-for="notes"></em>
+        </label>
+
+        <p id="ccf-notice" class="note note-warn" hidden></p>
+
+        <div class="actions">
+          <button type="submit" class="primary">Guardar</button>
+          <button type="button" id="btn-cancel-edit" class="subtle">Volver</button>
+        </div>
+      </form>
+    </section>
+
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>
