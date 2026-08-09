@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Comprobar tipos
+        run: npm run typecheck
+
+      # Construir va antes de probar: la prueba de humo del popup carga el
+      # bundle de dist/ y, si no existe, se salta.
+      - name: Construir
+        run: npm run build
+
+      # Las pruebas de DOM sí se saltan solas: dependen de unas capturas del
+      # formulario del portal que no se versionan.
+      - name: Pruebas
+        run: npm test

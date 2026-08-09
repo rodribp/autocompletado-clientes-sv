@@ -1,0 +1,46 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build
+      - run: npm test
+      - run: npm run zip
+
+      - name: Publicar el Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: '*.zip'
+          body: |
+            ## Instalación (no hace falta compilar nada)
+
+            1. Descarga el `.zip` de abajo y descomprímelo en una carpeta que no vayas a borrar.
+            2. Abre `chrome://extensions` en Chrome, Edge, Brave o Vivaldi.
+            3. Activa el **Modo de desarrollador** (interruptor arriba a la derecha).
+            4. Pulsa **Cargar descomprimida** y elige la carpeta que descomprimiste.
+            5. Entra a <https://admin.factura.gob.sv>, abre una Factura o un Crédito Fiscal
+               y pulsa el icono de la extensión.
+
+            > Si mueves o borras la carpeta, Chrome desactivará la extensión.
+
+            ## Privacidad
+
+            Tus clientes se guardan **solo en tu navegador**. La extensión no envía nada
+            a ningún servidor y no tiene permiso para actuar fuera de `admin.factura.gob.sv`.

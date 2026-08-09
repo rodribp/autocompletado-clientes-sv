@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Clientes</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <h1>Clientes</h1>
+      <span id="badge" class="badge" hidden></span>
+      <div class="menu">
+        <button id="btn-menu" class="icon-btn" aria-haspopup="true" aria-expanded="false" title="Más opciones">⋯</button>
+        <div id="menu-panel" class="menu-panel" role="menu" hidden>
+          <button id="btn-exportar" role="menuitem">Exportar respaldo (JSON)</button>
+          <button id="btn-importar" role="menuitem">Importar respaldo (JSON)</button>
+          <button id="btn-diagnostico" role="menuitem">Diagnóstico</button>
+        </div>
+      </div>
+    </header>
+
+    <p id="aviso" class="banner" hidden></p>
+
+    <!-- Vista: lista de clientes -->
+    <section id="vista-lista">
+      <div class="toolbar">
+        <input id="buscar" type="search" placeholder="Buscar por nombre, NIT o NRC" autocomplete="off" />
+        <button id="btn-nuevo" class="primary">Nuevo</button>
+      </div>
+      <button id="btn-capturar" class="wide subtle" hidden>Guardar cliente actual</button>
+
+      <ul id="lista" class="lista"></ul>
+      <p id="vacio" class="vacio" hidden></p>
+    </section>
+
+    <!-- Vista: alta y edición -->
+    <section id="vista-edicion" hidden>
+      <form id="form-cliente" novalidate>
+        <h2 id="titulo-edicion">Nuevo cliente</h2>
+
+        <label class="campo">
+          <span>Nombre o razón social <b aria-hidden="true">*</b></span>
+          <input name="nombre" type="text" maxlength="250" required />
+          <em class="error" data-error-for="nombre"></em>
+        </label>
+
+        <label class="campo">
+          <span>Nombre comercial</span>
+          <input name="nombreComercial" type="text" maxlength="150" placeholder="Opcional" />
+          <em class="error" data-error-for="nombreComercial"></em>
+        </label>
+
+        <div class="fila">
+          <label class="campo">
+            <span>Tipo de documento</span>
+            <select name="docType"></select>
+          </label>
+          <label class="campo">
+            <span>Número <b aria-hidden="true">*</b></span>
+            <input name="docNumber" type="text" required />
+            <em class="error" data-error-for="docNumber"></em>
+          </label>
+        </div>
+
+        <div class="fila">
+          <label class="campo">
+            <span>NRC</span>
+            <input name="nrc" type="text" inputmode="numeric" placeholder="123456-7" />
+            <em class="error" data-error-for="nrc"></em>
+          </label>
+          <label class="campo">
+            <span>Teléfono</span>
+            <input name="telefono" type="text" inputmode="tel" placeholder="2222-1234" />
+            <em class="error" data-error-for="telefono"></em>
+          </label>
+        </div>
+
+        <label class="campo">
+          <span>Correo electrónico</span>
+          <input name="correo" type="email" maxlength="100" />
+          <em class="error" data-error-for="correo"></em>
+        </label>
+
+        <div class="fila">
+          <label class="campo campo-corto">
+            <span>Código de actividad</span>
+            <input name="actividadCodigo" type="text" inputmode="numeric" placeholder="71102" />
+            <em class="error" data-error-for="actividad"></em>
+          </label>
+          <label class="campo">
+            <span>Descripción de la actividad</span>
+            <input name="actividadDescripcion" type="text" maxlength="150" />
+          </label>
+        </div>
+
+        <fieldset class="direccion">
+          <legend>Dirección</legend>
+          <div class="fila">
+            <label class="campo">
+              <span>Departamento</span>
+              <select name="departamento"></select>
+            </label>
+            <label class="campo">
+              <span>Municipio</span>
+              <select name="municipio"></select>
+              <input name="municipioManual" type="text" placeholder="Código" hidden />
+            </label>
+          </div>
+          <label class="campo">
+            <span>Distrito</span>
+            <select name="distrito"></select>
+            <input name="distritoManual" type="text" placeholder="Código" hidden />
+          </label>
+          <p id="aviso-catalogo" class="nota" hidden></p>
+          <label class="campo">
+            <span>Complemento</span>
+            <textarea name="complemento" rows="2" maxlength="200"></textarea>
+            <em class="error" data-error-for="complemento"></em>
+          </label>
+        </fieldset>
+
+        <label class="campo">
+          <span>Notas</span>
+          <textarea name="notas" rows="2" maxlength="500"></textarea>
+          <em class="error" data-error-for="notas"></em>
+        </label>
+
+        <p id="ccf-aviso" class="nota nota-warn" hidden></p>
+
+        <div class="acciones">
+          <button type="submit" class="primary">Guardar</button>
+          <button type="button" id="btn-cancelar-edicion" class="subtle">Volver</button>
+        </div>
+      </form>
+    </section>
+
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+    <input id="file-importar" type="file" accept="application/json,.json" hidden />
+
+    <script src="popup.js"></script>
+  </body>
+</html>
