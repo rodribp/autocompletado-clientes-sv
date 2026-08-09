@@ -15,7 +15,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
 
       - run: npm ci
@@ -29,7 +29,7 @@ jobs:
         with:
           files: '*.zip'
           body: |
-            ## Instalación (no hace falta compilar nada)
+            ## Instalación
 
             1. Descarga el `.zip` de abajo y descomprímelo en una carpeta que no vayas a borrar.
             2. Abre `chrome://extensions` en Chrome, Edge, Brave o Vivaldi.
