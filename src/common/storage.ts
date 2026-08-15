@@ -173,10 +173,28 @@ export interface ImportReport {
 }
 
 /**
- * Importa un respaldo. Los registros inválidos se omiten y se cuentan: uno
- * corrupto no debe costarle al usuario los otros doscientos.
+ * Lo que un respaldo haría si se aplicara, calculado sin tocar el almacenamiento.
+ * La página de importación lo enseña antes de pedir confirmación: sobrescribir
+ * doscientos clientes no debería ser un clic a ciegas.
  */
-export async function importJson(text: string, mode: 'merge' | 'replace'): Promise<ImportReport> {
+export interface ImportPlan {
+  /** Clientes válidos del archivo, ya normalizados y listos para escribir. */
+  validos: Customer[];
+  /** Registros del archivo que no son clientes y se descartarían. */
+  omitidos: number;
+  /** Los que se agregarían. */
+  nuevos: Customer[];
+  /** Los que pisarían a un cliente que ya existe, con el actual al lado. */
+  colisiones: Array<{ entrante: Customer; actual: Customer }>;
+  /** Cuántos clientes hay ahora mismo guardados. `replace` borraría los que no vengan. */
+  totalActual: number;
+}
+
+/**
+ * Parsea y valida un respaldo sin escribir. Los registros inválidos se omiten y
+ * se cuentan: uno corrupto no debe costarle al usuario los otros doscientos.
+ */
+function parseBackup(text: string): { validos: Customer[]; omitidos: number } {
   let parsed: unknown;
   try {
     parsed = JSON.parse(text);
@@ -192,23 +210,54 @@ export async function importJson(text: string, mode: 'merge' | 'replace'): Promi
     throw new Error('El archivo no parece un respaldo de clientes.');
   }
 
-  const report: ImportReport = { importados: 0, actualizados: 0, omitidos: 0 };
-  const valid: Customer[] = [];
+  const validos: Customer[] = [];
+  let omitidos = 0;
   for (const item of incomingRaw) {
-    if (looksLikeCustomer(item)) valid.push(fixUp(item));
-    else report.omitidos++;
+    if (looksLikeCustomer(item)) validos.push(fixUp(item));
+    else omitidos++;
   }
 
+  return { validos, omitidos };
+}
+
+/** Vista previa de una importación. No escribe nada. */
+export async function planImport(text: string): Promise<ImportPlan> {
+  const { validos, omitidos } = parseBackup(text);
+  const { customers } = await readDb();
+  const byId = new Map(customers.map((c) => [c.id, c]));
+
+  const nuevos: Customer[] = [];
+  const colisiones: ImportPlan['colisiones'] = [];
+  for (const entrante of validos) {
+    const actual = byId.get(entrante.id);
+    if (actual) colisiones.push({ entrante, actual });
+    else nuevos.push(entrante);
+  }
+
+  return { validos, omitidos, nuevos, colisiones, totalActual: customers.length };
+}
+
+/**
+ * Escribe una importación ya validada. Recuenta contra lo que hay en disco en
+ * vez de fiarse del plan: entre la vista previa y el clic de confirmar, el popup
+ * pudo haber guardado otro cliente.
+ */
+export async function applyImport(
+  validos: Customer[],
+  omitidos: number,
+  mode: 'merge' | 'replace',
+): Promise<ImportReport> {
   return serialize(async () => {
     const db = mode === 'replace' ? emptyDb() : await readDb();
     const byId = new Map(db.customers.map((c) => [c.id, c]));
+    const report: ImportReport = { importados: 0, actualizados: 0, omitidos };
 
-    for (const incoming of valid) {
-      if (byId.has(incoming.id)) {
-        byId.set(incoming.id, { ...byId.get(incoming.id)!, ...incoming, updatedAt: Date.now() });
+    for (const entrante of validos) {
+      if (byId.has(entrante.id)) {
+        byId.set(entrante.id, { ...byId.get(entrante.id)!, ...entrante, updatedAt: Date.now() });
         report.actualizados++;
       } else {
-        byId.set(incoming.id, incoming);
+        byId.set(entrante.id, entrante);
         report.importados++;
       }
     }
@@ -217,4 +266,10 @@ export async function importJson(text: string, mode: 'merge' | 'replace'): Promi
     await writeDb(db);
     return report;
   });
+}
+
+/** Importa de una sola vez, sin vista previa. */
+export async function importJson(text: string, mode: 'merge' | 'replace'): Promise<ImportReport> {
+  const { validos, omitidos } = parseBackup(text);
+  return applyImport(validos, omitidos, mode);
 }

@@ -34,6 +34,7 @@ const ENTRY_POINTS = {
   content: 'src/content/index.ts',
   background: 'src/background/index.ts',
   popup: 'src/popup/index.ts',
+  import: 'src/import/index.ts',
 };
 
 const SHARED = {

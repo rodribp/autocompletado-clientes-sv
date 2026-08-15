@@ -2,7 +2,7 @@
 //
 // Respaldos en JSON: la vía para llevarse los clientes a otra máquina.
 
-import { exportJson, importJson, type ImportReport } from '../common/storage.js';
+import { exportJson } from '../common/storage.js';
 
 /** Un enlace sintético a un blob evita tener que pedir el permiso `downloads`. */
 export async function downloadBackup(): Promise<void> {
@@ -21,15 +21,10 @@ export async function downloadBackup(): Promise<void> {
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
-export function readFile(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result ?? ''));
-    reader.onerror = () => reject(reader.error ?? new Error('No se pudo leer el archivo.'));
-    reader.readAsText(file);
-  });
-}
-
-export async function restoreBackup(file: File): Promise<ImportReport> {
-  return importJson(await readFile(file), 'merge');
+/**
+ * Restaurar no vive aquí: abrir el selector de archivos cierra el popup, así que
+ * la importación tiene su propia página. Ver `src/import/index.ts`.
+ */
+export function openImportPage(): void {
+  void chrome.tabs.create({ url: chrome.runtime.getURL('import.html') });
 }
