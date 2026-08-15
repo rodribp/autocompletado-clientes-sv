@@ -11,7 +11,7 @@ import { deleteCustomer, listCustomers, saveCustomer, searchCustomers } from '..
 import { validateDraft } from '../common/validate.js';
 import type { Customer } from '../common/types.js';
 import { initEditView, openEditor, readDraft, reloadCatalog, showErrors } from './edit.js';
-import { downloadBackup, restoreBackup } from './io.js';
+import { downloadBackup, openImportPage } from './io.js';
 import { renderList, type ListState } from './list.js';
 import { hideToast, toast, toastFillReport } from './toast.js';
 
@@ -82,12 +82,8 @@ function wireEvents(): void {
   });
 
   $('btn-exportar').addEventListener('click', () => void handleExport());
-  $('btn-importar').addEventListener('click', () => $<HTMLInputElement>('file-importar').click());
+  $('btn-importar').addEventListener('click', () => handleImport());
   $('btn-diagnostico').addEventListener('click', () => void handleDiagnose());
-  $<HTMLInputElement>('file-importar').addEventListener('change', (event) => {
-    const file = (event.target as HTMLInputElement).files?.[0];
-    if (file) void handleImport(file);
-  });
 
   // Cancelar el borrado se delega, porque el botón se recrea en cada render.
   $('lista').addEventListener('click', (event) => {
@@ -268,17 +264,14 @@ async function handleExport(): Promise<void> {
   toast('Respaldo descargado.', 'ok');
 }
 
-async function handleImport(file: File): Promise<void> {
+/**
+ * La importación se hace en su propia pestaña. El popup se cerrará en cuanto
+ * pierda el foco, que es justo el motivo de no hacerlo aquí; la lista se
+ * refresca sola cuando la otra pestaña escriba, vía `chrome.storage.onChanged`.
+ */
+function handleImport(): void {
   $('menu-panel').hidden = true;
-  try {
-    const report = await restoreBackup(file);
-    await refreshCustomers();
-    toast(T.importadoOk(report), report.omitidos > 0 ? 'warn' : 'ok', 8000);
-  } catch (error) {
-    toast(error instanceof Error ? error.message : String(error), 'error', 8000);
-  } finally {
-    $<HTMLInputElement>('file-importar').value = '';
-  }
+  openImportPage();
 }
 
 async function handleDiagnose(): Promise<void> {

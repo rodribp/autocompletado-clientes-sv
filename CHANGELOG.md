@@ -12,7 +12,9 @@ y el versionado es [semántico](https://semver.org/lang/es/).
   departamento → municipio → distrito y el selector de actividad económica.
 - «Guardar cliente actual»: lee el receptor que está en pantalla y lo propone como cliente.
 - Catálogo de municipios y distritos que se aprende solo de las páginas rellenadas.
-- Respaldo e importación en JSON para migrar entre computadoras.
+- Respaldo e importación en JSON para migrar entre computadoras. La importación abre su
+  propia pestaña, enseña qué clientes se agregarían y cuáles se sobrescribirían, y no
+  escribe nada hasta que lo confirmas.
 - Aviso de aptitud para crédito fiscal por cliente.
 - Comando **Diagnóstico**, para saber qué campos dejó de encontrar la extensión si el
   portal cambia su maquetación.

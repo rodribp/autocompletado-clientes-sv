@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Importar respaldo — Clientes</title>
+    <!-- popup.css aporta los colores y los botones; import.css solo lo que cambia en una pestaña. -->
+    <link rel="stylesheet" href="popup.css" />
+    <link rel="stylesheet" href="import.css" />
+  </head>
+  <body class="pagina">
+    <header class="topbar">
+      <h1>Importar respaldo</h1>
+    </header>
+
+    <main class="hoja">
+      <p id="error" class="banner" hidden></p>
+
+      <!-- Paso 1: elegir el archivo -->
+      <section id="paso-elegir">
+        <div id="zona" class="zona">
+          <p class="zona-texto">Arrastra aquí tu respaldo <b>.json</b></p>
+          <p class="zona-o">o</p>
+          <button id="btn-elegir" type="button" class="primary">Elegir archivo…</button>
+        </div>
+        <p class="nota">
+          Nada se guarda todavía. Primero verás qué cambiaría y tendrás que confirmarlo.
+        </p>
+      </section>
+
+      <!-- Paso 2: vista previa y confirmación -->
+      <section id="paso-previa" hidden>
+        <p id="archivo" class="nota"></p>
+
+        <ul class="resumen">
+          <li><b id="n-nuevos">0</b><span>se agregarían</span></li>
+          <li><b id="n-actualizados">0</b><span>se sobrescribirían</span></li>
+          <li id="li-omitidos" hidden><b id="n-omitidos">0</b><span>se descartarían</span></li>
+        </ul>
+
+        <fieldset class="modo">
+          <legend>Qué hacer con los clientes que ya tienes</legend>
+          <label class="opcion">
+            <input type="radio" name="modo" value="merge" checked />
+            <span>
+              <b>Combinar</b>
+              <em>Añade los nuevos y actualiza los repetidos. No se pierde nada.</em>
+            </span>
+          </label>
+          <label class="opcion">
+            <input type="radio" name="modo" value="replace" />
+            <span>
+              <b>Reemplazar todo</b>
+              <em>Borra tus clientes actuales y deja solo los del archivo.</em>
+            </span>
+          </label>
+        </fieldset>
+
+        <p id="aviso-replace" class="nota nota-warn" hidden></p>
+
+        <div id="detalle" class="detalle"></div>
+
+        <div class="acciones">
+          <button id="btn-confirmar" type="button" class="primary">Importar</button>
+          <button id="btn-cancelar" type="button" class="subtle">Elegir otro archivo</button>
+        </div>
+      </section>
+
+      <!-- Paso 3: resultado -->
+      <section id="paso-hecho" hidden>
+        <p id="reporte" class="hecho"></p>
+        <div class="acciones">
+          <button id="btn-otro" type="button" class="subtle">Importar otro respaldo</button>
+          <button id="btn-cerrar" type="button" class="primary">Cerrar</button>
+        </div>
+      </section>
+    </main>
+
+    <input id="file" type="file" accept="application/json,.json" hidden />
+
+    <script src="import.js"></script>
+  </body>
+</html>

@@ -10,11 +10,13 @@ import { installChromeStub } from '../helpers/chrome-stub.ts';
 const store = installChromeStub();
 
 const {
+  applyImport,
   deleteCustomer,
   exportJson,
   importJson,
   listCustomers,
   migrate,
+  planImport,
   readDb,
   saveCustomer,
   searchCustomers,
@@ -140,6 +142,48 @@ test('importar omite los registros corruptos sin abortar el resto', async () => 
 test('importar un archivo que no es un respaldo da un error legible', async () => {
   await assert.rejects(() => importJson('esto no es json', 'merge'), /JSON válido/);
   await assert.rejects(() => importJson('{"otra":"cosa"}', 'merge'), /respaldo de clientes/);
+});
+
+test('planImport separa altas de sobrescrituras sin tocar el disco', async () => {
+  const existente = await saveCustomer(draft('Nombre Viejo'));
+  const contenido = JSON.stringify({
+    customers: [
+      { ...existente, nombre: 'Nombre Nuevo' },
+      { id: 'otro', nombre: 'Recién Llegado', docType: '36', docNumber: '2', direccion: emptyDireccion() },
+      { id: 'roto', falta: 'todo' },
+    ],
+  });
+
+  const plan = await planImport(contenido);
+
+  assert.equal(plan.nuevos.length, 1);
+  assert.equal(plan.nuevos[0]!.nombre, 'Recién Llegado');
+  assert.equal(plan.colisiones.length, 1);
+  assert.equal(plan.colisiones[0]!.actual.nombre, 'Nombre Viejo', 'debe traer el que se pisaría');
+  assert.equal(plan.colisiones[0]!.entrante.nombre, 'Nombre Nuevo');
+  assert.equal(plan.omitidos, 1);
+  assert.equal(plan.totalActual, 1);
+
+  // Lo importante: previsualizar no escribe.
+  const enDisco = await listCustomers();
+  assert.equal(enDisco.length, 1);
+  assert.equal(enDisco[0]!.nombre, 'Nombre Viejo', 'planImport no debe haber guardado nada');
+});
+
+test('applyImport escribe lo que planImport prometió', async () => {
+  await saveCustomer(draft('Nombre Viejo'));
+  const contenido = JSON.stringify({
+    customers: [
+      { id: 'otro', nombre: 'Recién Llegado', docType: '36', docNumber: '2', direccion: emptyDireccion() },
+    ],
+  });
+
+  const plan = await planImport(contenido);
+  const report = await applyImport(plan.validos, plan.omitidos, 'merge');
+
+  assert.equal(report.importados, 1);
+  assert.equal(report.actualizados, 0);
+  assert.equal((await listCustomers()).length, 2, 'combinar conserva al que ya estaba');
 });
 
 test('importar en modo replace descarta lo anterior', async () => {
