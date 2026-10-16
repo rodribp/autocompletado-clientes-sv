@@ -9,6 +9,9 @@ import {
   formatPhone,
   parseActivityLabel,
   parseDigits,
+  formatAmount,
+  parsePrice,
+  unitPriceFor,
 } from '../../src/common/normalize.ts';
 
 test('parseDigits keeps only digits', () => {
@@ -58,4 +61,38 @@ test('a description containing dashes is not over-split', () => {
     code: '47190',
     description: 'Venta al por menor - otros',
   });
+});
+
+test('unitPriceFor removes IVA only for a taxed item on a CCF', () => {
+  assert.equal(unitPriceFor({ price: 11.3, saleType: 'G' }, 'ccf'), '10', 'float noise must not leak through');
+  assert.equal(unitPriceFor({ price: 5, saleType: 'G' }, 'ccf'), '4.42477876', '8 decimals, as the price mask allows');
+  assert.equal(unitPriceFor({ price: 5, saleType: 'E' }, 'ccf'), '5', 'exempt items carry no IVA');
+  assert.equal(unitPriceFor({ price: 5, saleType: 'N' }, 'ccf'), '5');
+  assert.equal(unitPriceFor({ price: 11.3, saleType: 'G' }, 'cf'), '11.3', 'CF takes the final price as is');
+  assert.equal(unitPriceFor({ price: 100, saleType: 'G' }, 'cf'), '100', 'trimming zeros must stop at the decimal point');
+});
+
+test('the CCF unit price plus 13% gives back the final price', () => {
+  for (const price of [0.25, 1, 5, 9.99, 11.3, 1234.56]) {
+    const net = Number(unitPriceFor({ price, saleType: 'G' }, 'ccf'));
+    assert.equal(Math.round(net * 1.13 * 100) / 100, price, `${price}`);
+  }
+});
+
+test('parsePrice accepts what people type and rejects the rest', () => {
+  assert.equal(parsePrice('5'), 5);
+  assert.equal(parsePrice('5,50'), 5.5, 'decimal comma');
+  assert.equal(parsePrice(' $1,234.50 '), 1234.5, 'comma as thousands separator');
+  assert.equal(parsePrice('0.12345678'), 0.12345678);
+  assert.equal(parsePrice('0.123456789'), null, 'more decimals than the portal accepts');
+  assert.equal(parsePrice(''), null);
+  assert.equal(parsePrice('0'), null);
+  assert.equal(parsePrice('-5'), null);
+  assert.equal(parsePrice('cinco'), null);
+});
+
+test('formatAmount writes numbers the way the portal fields take them', () => {
+  assert.equal(formatAmount(3), '3');
+  assert.equal(formatAmount(2.5), '2.5');
+  assert.equal(formatAmount(0.00000001), '0.00000001', 'never exponent notation');
 });

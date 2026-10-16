@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { docFieldFor, validateDraft, validateField } from '../../src/common/validate.ts';
+import { docFieldFor, validateDraft, validateField, validateProduct } from '../../src/common/validate.ts';
 import { emptyAddress } from '../../src/common/types.ts';
 
 test('NIT accepts 14 digits and also 9 (DUI as NIT)', () => {
@@ -59,4 +59,13 @@ test('validateDraft flags an empty name and a document that does not match its t
 
   assert.ok(errors.name);
   assert.ok(errors.docNumber, 'a 3-digit DUI is not valid');
+});
+
+test('validateProduct requires a description and a positive price', () => {
+  const ok = { description: 'Consultoría', itemType: '2' as const, unit: '59', saleType: 'G' as const, price: 50 };
+  assert.deepEqual(validateProduct(ok), {});
+
+  const errors = validateProduct({ ...ok, description: ' ', price: NaN, unit: '1000', code: 'x'.repeat(26) });
+  assert.deepEqual(Object.keys(errors).sort(), ['code', 'description', 'price', 'unit']);
+  assert.ok(validateProduct({ ...ok, price: 0 }).price);
 });

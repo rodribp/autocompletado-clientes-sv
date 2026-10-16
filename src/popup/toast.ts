@@ -1,5 +1,5 @@
-import { SKIP_REASONS, T } from '../common/i18n.js';
-import type { FieldKey, FillReport } from '../common/messages.js';
+import { ERROR_MESSAGES, SKIP_REASONS, T, fieldLabel } from '../common/i18n.js';
+import type { FillReport, Res } from '../common/messages.js';
 
 type Tone = 'ok' | 'warn' | 'error' | 'info';
 
@@ -22,6 +22,11 @@ export function toast(message: string, tone: Tone = 'info', autoHideMs = 4000): 
 export function hideToast(): void {
   clearTimeout(hideTimer);
   element().hidden = true;
+}
+
+export function toastError(result: Res<unknown>): void {
+  if (result.ok) return;
+  toast(ERROR_MESSAGES[result.error.code] ?? result.error.message, 'error', 8000);
 }
 
 // A partial fill doesn't auto-hide: the user needs to read and copy what was missed.
@@ -83,25 +88,4 @@ function copyButton(value: string): HTMLButtonElement {
     );
   });
   return button;
-}
-
-const FIELD_LABELS: Record<FieldKey, string> = {
-  docType: 'Tipo de documento',
-  docNumber: 'Número de documento',
-  nit: 'NIT',
-  name: 'Nombre',
-  tradeName: 'Nombre comercial',
-  nrc: 'NRC',
-  activity: 'Actividad económica',
-  activityDescription: 'Descripción de la actividad',
-  department: 'Departamento',
-  municipality: 'Municipio',
-  district: 'Distrito',
-  details: 'Complemento',
-  email: 'Correo',
-  phone: 'Teléfono',
-};
-
-export function fieldLabel(key: string): string {
-  return FIELD_LABELS[key as FieldKey] ?? key;
 }

@@ -17,6 +17,8 @@ npm test        # compiles tests/ to .tmp/ and runs node --test
 | `dom/descriptors.test.ts` | Every declared field resolves to exactly one element |
 | `dom/selects.test.ts` | Dropdowns are matched by code, never by text |
 | `dom/docnumber.test.ts` | The deferred document number slot in CF |
+| `dom/item.test.ts` | The item pop-up: every field resolves inside `<nuevo-item-doc>`, the option codes match, filling never leaks outside it, invalid stored products are refused, the typed quantity is kept |
+| `dom/suggest.test.ts` | In-page suggestions: they appear only under Producto/Código, keys work, Esc doesn't close the portal's pop-up, late answers are dropped |
 | `dom/ngselect.test.ts` | The `<ng-select>` driver against a synthetic double |
 | `dom/popup.test.ts` | Popup smoke tests against the `dist/` bundle |
 | `dom/import.test.ts` | Import page smoke tests against the `dist/` bundle |
@@ -29,6 +31,13 @@ versioned, so you must generate them: open `/cf` and `/ccf` and save each page w
 
 ```sh
 SNAPSHOTS_DIR=my-folder npm test
+```
+
+`cf-item.html` is the open "Ítem DTE" pop-up (identical in CF and CCF). Angular only
+renders it while it is open, so capture it from DevTools with the pop-up open:
+
+```js
+copy(document.querySelector('nuevo-item-doc').closest('.modal-dialog').outerHTML)
 ```
 
 **When they are missing, those tests skip themselves** instead of failing; in CI only the
@@ -68,6 +77,15 @@ Do it at least once per published version.
 8. **Issue a real, complete document.** It's the only way for the backend to validate our
    values; the masks are the highest-risk point.
 9. Export → clear the extension's data → import → fill again.
+10. `/cf` → «Agregar Detalle → Producto o Servicio» → type 3 in Cantidad, then «caf» in
+    Producto: the list appears under the field; `↓` `Enter` fills everything and keeps the 3.
+    Press «Agregar ítem»: the line total is 3 × the stored price. `Esc` closes only the list,
+    not the pop-up. Typing in Código suggests too.
+11. Same on `/ccf` with a $5.00 taxed product: Precio is `4.42477876` and subtotal + IVA is
+    $5.00. An exempt product keeps its price. A price ≥ $1,000 fills without a warning.
+12. Pick a product with a code, then one without: Código ends up empty.
+13. Set a product's `price` to `-1` in `chrome.storage.local` → picking it shows the reason
+    under the field and fills nothing.
 
 ## CF's document number `formcontrolname`
 

@@ -27,7 +27,7 @@ interface Harness {
   choose(content: string): Promise<void>;
 }
 
-async function mountImport(saved: unknown[] = []): Promise<Harness> {
+async function mountImport(saved: unknown[] = [], savedProducts: unknown[] = []): Promise<Harness> {
   const dom = new JSDOM(readFileSync(resolve(DIST, 'import.html'), 'utf8'), {
     url: 'chrome-extension://test/import.html',
     runScripts: 'outside-only',
@@ -42,6 +42,7 @@ async function mountImport(saved: unknown[] = []): Promise<Harness> {
 
   const storage: Record<string, unknown> = {};
   if (saved.length > 0) storage.db = { schemaVersion: 1, customers: saved };
+  if (savedProducts.length > 0) storage.products = { schemaVersion: 1, products: savedProducts };
 
   const errors: string[] = [];
   window.addEventListener('error', (e) => errors.push(String((e as ErrorEvent).message)));
@@ -182,4 +183,39 @@ test('a non-backup file is explained and does not break the page', { skip }, asy
   assert.match(error.textContent!, /JSON válido/);
   assert.equal(document.getElementById('step-preview')!.hasAttribute('hidden'), true, 'should not advance');
   assert.equal((storage.db as { customers: unknown[] }).customers.length, 1, 'should not touch stored data');
+});
+
+const PRODUCT = { id: 'cafe', description: 'Café viejo', itemType: '1', unit: '59', saleType: 'G', price: 5, createdAt: 1, updatedAt: 1 };
+
+test('the preview lists the products to add and overwrite', { skip }, async () => {
+  const { document, window, settle, storage, errors, choose } = await mountImport([], [
+    PRODUCT,
+    { ...PRODUCT, id: 'se-pierde', description: 'No Está' },
+  ]);
+
+  await choose(
+    JSON.stringify({
+      customers: [],
+      products: [
+        { ...PRODUCT, description: 'Café nuevo', price: 6 },
+        { ...PRODUCT, id: 'azucar', description: 'Azúcar', saleType: 'E' },
+      ],
+    }),
+  );
+
+  assert.deepEqual(errors, []);
+  const details = document.getElementById('preview-details')!.textContent!;
+  assert.match(details, /Productos que se agregarían \(1\)/);
+  assert.match(details, /Azúcar \$5\.00 · Exento/);
+  assert.match(details, /Productos que se sobrescribirían \(1\)/);
+  assert.match(details, /Café viejo→Café nuevo \$5\.00 → \$6\.00/, 'a price change must be visible');
+
+  const replace = document.querySelector('input[name="mode"][value="replace"]') as HTMLInputElement;
+  replace.checked = true;
+  replace.dispatchEvent(new window.Event('change', { bubbles: true }));
+  await settle();
+  assert.match(document.getElementById('replace-warning')!.textContent!, /Se borrará 1 producto/);
+
+  const saved = (storage.products as { products: { price: number }[] }).products;
+  assert.equal(saved[0]!.price, 5, 'the preview should not have written');
 });

@@ -1,7 +1,7 @@
 // Expects canonical input: typed values already went through `normalize.ts` (no dashes).
 
 import { parseDigits } from './normalize.js';
-import type { Customer, CustomerDraft, DocType } from './types.js';
+import { isItemType, isSaleType, isUnit, type Customer, type CustomerDraft, type DocType, type Product, type ProductDraft } from './types.js';
 
 export type Field =
   | 'nit'
@@ -133,7 +133,7 @@ export function validateDraft(d: Partial<CustomerDraft>): DraftErrors {
   return errors;
 }
 
-export function hasErrors(errors: DraftErrors): boolean {
+export function hasErrors(errors: object): boolean {
   return Object.keys(errors).length > 0;
 }
 
@@ -141,4 +141,42 @@ export function looksLikeCustomer(v: unknown): v is Customer {
   if (typeof v !== 'object' || v === null) return false;
   const c = v as Record<string, unknown>;
   return typeof c.name === 'string' && typeof c.docNumber === 'string' && typeof c.docType === 'string';
+}
+
+// Limits declared by the portal's item pop-up.
+const ITEM_MAX = {
+  description: 1500,
+  code: 25,
+  notes: 500,
+} as const;
+
+export type ProductErrors = Partial<Record<'description' | 'code' | 'itemType' | 'unit' | 'saleType' | 'price' | 'notes', string>>;
+
+export function validateProduct(d: Partial<ProductDraft>): ProductErrors {
+  const errors: ProductErrors = {};
+
+  const description = (d.description ?? '').trim();
+  if (!description) errors.description = 'La descripción es obligatoria.';
+  else if (description.length > ITEM_MAX.description) {
+    errors.description = `La descripción no puede pasar de ${ITEM_MAX.description} caracteres.`;
+  }
+
+  if ((d.code ?? '').length > ITEM_MAX.code) errors.code = `El código no puede pasar de ${ITEM_MAX.code} caracteres.`;
+  if (!isItemType(d.itemType)) errors.itemType = 'Elige un tipo.';
+  if (!isUnit(d.unit)) errors.unit = 'Elige una unidad de medida.';
+  if (!isSaleType(d.saleType)) errors.saleType = 'Elige un tipo de venta.';
+
+  if (typeof d.price !== 'number' || !Number.isFinite(d.price) || d.price <= 0) {
+    errors.price = 'Escribe un precio mayor que 0, con hasta 8 decimales.';
+  }
+
+  if ((d.notes ?? '').length > ITEM_MAX.notes) errors.notes = `Las notas no pueden pasar de ${ITEM_MAX.notes} caracteres.`;
+
+  return errors;
+}
+
+export function looksLikeProduct(v: unknown): v is Product {
+  if (typeof v !== 'object' || v === null) return false;
+  const p = v as Record<string, unknown>;
+  return typeof p.description === 'string' && typeof p.price === 'number' && isItemType(p.itemType);
 }

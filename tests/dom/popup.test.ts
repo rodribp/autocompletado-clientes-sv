@@ -226,3 +226,49 @@ test('search filters the list', { skip }, async () => {
   assert.equal(document.querySelectorAll('#list .item').length, 1, 'search should ignore accents');
   assert.match(document.querySelector('.item-name')!.textContent!, /Peña/);
 });
+
+test('the Productos tab swaps the list and creates a product', { skip }, async () => {
+  const { document, window, storage, settle, errors } = await mountPopup();
+
+  (document.getElementById('tab-products') as HTMLButtonElement).click();
+  await settle();
+  assert.equal(document.getElementById('list-view')!.hasAttribute('hidden'), true);
+  assert.equal(document.getElementById('products-view')!.hasAttribute('hidden'), false);
+  assert.equal(document.getElementById('tab-products')!.getAttribute('aria-selected'), 'true');
+
+  (document.getElementById('btn-new-product') as HTMLButtonElement).click();
+  await settle();
+  const form = document.getElementById('product-form') as HTMLFormElement;
+  (form.elements.namedItem('description') as HTMLTextAreaElement).value = 'Café molido';
+  (form.elements.namedItem('price') as HTMLInputElement).value = '5,50';
+  form.dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }));
+  await settle();
+
+  assert.deepEqual(errors, []);
+  const saved = (storage.products as { products: Record<string, unknown>[] }).products;
+  assert.equal(saved.length, 1);
+  assert.equal(saved[0]!.price, 5.5, 'the decimal comma is understood');
+  assert.equal(saved[0]!.unit, '59', 'defaults to Unidad');
+
+  assert.equal(
+    document.querySelector('#product-list .item .primary'),
+    null,
+    'products are used from the portal pop-up, not from a button here',
+  );
+});
+
+test('a product with a bad price is not saved', { skip }, async () => {
+  const { document, window, storage, settle } = await mountPopup();
+
+  (document.getElementById('tab-products') as HTMLButtonElement).click();
+  (document.getElementById('btn-new-product') as HTMLButtonElement).click();
+  await settle();
+  const form = document.getElementById('product-form') as HTMLFormElement;
+  (form.elements.namedItem('description') as HTMLTextAreaElement).value = 'Algo';
+  (form.elements.namedItem('price') as HTMLInputElement).value = 'gratis';
+  form.dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }));
+  await settle();
+
+  assert.match(form.querySelector('[data-error-for="price"]')!.textContent!, /precio/);
+  assert.equal(storage.products, undefined);
+});

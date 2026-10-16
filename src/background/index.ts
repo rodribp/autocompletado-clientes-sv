@@ -2,7 +2,7 @@
 
 import { mergeCatalog, type CatalogDelta } from '../common/catalog.js';
 import { err, ok, respondAsync, type Envelope, type Res, type ToBackgroundKind } from '../common/messages.js';
-import { getCustomer, listCustomers, searchCustomers } from '../common/storage.js';
+import { getCustomer, listCustomers, listProducts, searchCustomers, searchProducts } from '../common/storage.js';
 
 const PORTAL_PREFIX = 'https://admin.factura.gob.sv/';
 
@@ -20,6 +20,12 @@ chrome.runtime.onMessage.addListener(
         const { id } = message.payload as { id: string };
         if (!id) return err('BAD_REQUEST', 'Missing customer id.');
         return ok((await getCustomer(id)) ?? null);
+      }
+
+      case 'QUERY_PRODUCTS': {
+        const { q, limit } = message.payload as { q: string; limit?: number };
+        const found = searchProducts(await listProducts(), q ?? '');
+        return ok(typeof limit === 'number' ? found.slice(0, limit) : found);
       }
 
       case 'PUT_CATALOG': {

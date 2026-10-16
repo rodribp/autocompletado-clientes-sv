@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "license": "GPL-3.0-or-later",
-  "description": "Extensión de Chrome que guarda tus clientes localmente y rellena el receptor de facturas y créditos fiscales en admin.factura.gob.sv.",
+  "description": "Extensión de Chrome que guarda tus clientes y productos localmente y rellena el receptor y los ítems de facturas y créditos fiscales en admin.factura.gob.sv.",
   "engines": {
     "node": ">=20"
   },

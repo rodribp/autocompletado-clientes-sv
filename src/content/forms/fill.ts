@@ -1,14 +1,24 @@
-import { parseDigits } from '../../common/normalize.js';
-import type { Customer } from '../../common/types.js';
+import { parseDigits, unitPriceFor } from '../../common/normalize.js';
+import { validateProduct } from '../../common/validate.js';
+import type { Customer, Product } from '../../common/types.js';
 import type { FieldKey, FillReport, FormType, SkipReason, SkippedField } from '../../common/messages.js';
 import { setNgSelect, setSelect, setText, typeText, waitFor } from '../dom.js';
 import { activateRecipientTab, awaitRecipientRoot, q } from './detect.js';
 import { CF_KNOWN_CONTROLS, CF_SCHEMA } from './cf.js';
 import { CCF_SCHEMA } from './ccf.js';
+import { ITEM_FIELDS, itemModalRoot, type ItemLine } from './item.js';
 import { byOrder, clamp, type FieldDescriptor, type FormSchema } from './schema.js';
 
 export class FillError extends Error {
-  constructor(readonly code: 'PAGE_NOT_SUPPORTED' | 'PAGE_NOT_READY' | 'RECIPIENT_ROOT_MISSING', message: string) {
+  constructor(
+    readonly code:
+      | 'PAGE_NOT_SUPPORTED'
+      | 'PAGE_NOT_READY'
+      | 'RECIPIENT_ROOT_MISSING'
+      | 'ITEM_MODAL_MISSING'
+      | 'INVALID_PRODUCT',
+    message: string,
+  ) {
     super(message);
     this.name = 'FillError';
   }
@@ -59,23 +69,62 @@ export async function fillRecipient(customer: Customer, formType: FormType): Pro
   activateRecipientTab();
 
   const report = new Report(formType);
-  const schema = schemaFor(formType);
+  await fillFields(root, schemaFor(formType).fields, customer, report, formType);
+  return report.finish();
+}
 
-  for (const field of [...schema.fields].sort(byOrder)) {
+// Stored products can be edited by hand, so validate again before touching the portal.
+function assertValid(product: Product): void {
+  const errors = Object.values(validateProduct(product));
+  if (errors.length > 0) throw new FillError('INVALID_PRODUCT', errors.join(' '));
+}
+
+// Keeps the quantity the user already typed in the pop-up.
+function itemLine(product: Product, formType: FormType, root: HTMLElement): ItemLine {
+  const typed = q<HTMLInputElement>(root, 'cantidad')?.value.replace(/,/g, '') ?? '';
+  return {
+    itemType: product.itemType,
+    quantity: Number(typed) > 0 ? typed : '1',
+    unit: product.unit,
+    code: product.code ?? '',
+    description: product.description,
+    saleType: product.saleType,
+    price: unitPriceFor(product, formType),
+  };
+}
+
+// Fills the pop-up the user is typing in; confirming stays with the user.
+export async function fillItem(product: Product, formType: FormType): Promise<FillReport> {
+  const root = itemModalRoot();
+  if (!root) throw new FillError('ITEM_MODAL_MISSING', 'The item pop-up is not open.');
+  assertValid(product);
+
+  const line = itemLine(product, formType, root);
+  const report = new Report(formType);
+  await fillFields(root, ITEM_FIELDS, line, report, formType);
+  return report.finish();
+}
+
+async function fillFields<T>(
+  root: HTMLElement,
+  fields: FieldDescriptor<T>[],
+  data: T,
+  report: Report,
+  formType: FormType,
+): Promise<void> {
+  for (const field of [...fields].sort(byOrder)) {
     try {
-      await applyField(root, field, customer, report, formType);
+      await applyField(root, field, data, report, formType);
     } catch (error) {
       report.skip(field.key, 'EXCEPTION', undefined, error instanceof Error ? error.message : String(error));
     }
   }
-
-  return report.finish();
 }
 
-async function applyField(
+async function applyField<T>(
   root: HTMLElement,
-  field: FieldDescriptor,
-  customer: Customer,
+  field: FieldDescriptor<T>,
+  data: T,
   report: Report,
   formType: FormType,
 ): Promise<void> {
@@ -84,9 +133,10 @@ async function applyField(
     return;
   }
 
-  const raw = field.value(customer);
+  const raw = field.value(data);
 
   if (raw === null || raw === '') {
+    if (field.clearWhenEmpty) return applyTextField(root, field, '', report);
     // In CCF a null `nit` isn't missing data: the customer isn't eligible for a CCF.
     if (formType === 'ccf' && field.key === 'nit') {
       report.skip(field.key, 'NOT_ELIGIBLE_CCF');
@@ -105,13 +155,13 @@ async function applyField(
     case 'select':
       return applySelectField(root, field, value, report);
     case 'ngselect':
-      return applyNgSelectField(root, field, value, customer, report);
+      return applyNgSelectField(root, field, value, data, report);
     case 'dynamicDoc':
       return applyDocNumberField(root, field, value, report);
   }
 }
 
-function applyTextField(root: HTMLElement, field: FieldDescriptor, value: string, report: Report): void {
+function applyTextField<T>(root: HTMLElement, field: FieldDescriptor<T>, value: string, report: Report): void {
   const el = q<HTMLInputElement | HTMLTextAreaElement>(root, field.control!);
   if (!el) {
     if (!field.optional) report.skip(field.key, 'CONTROL_NOT_FOUND', value);
@@ -131,15 +181,17 @@ function applyTextField(root: HTMLElement, field: FieldDescriptor, value: string
   report.ok(field.key);
 }
 
-// ngx-mask and the portal's `oninput` handlers reformat, so compare numbers by digits only.
-function valueLanded(actual: string, intended: string): boolean {
+// ngx-mask and the portal's `oninput` handlers reformat, so compare numbers by digits only,
+// and decimals by value (`separator.8` turns `1234.5` into `1,234.5`).
+export function valueLanded(actual: string, intended: string): boolean {
   if (/^\d+$/.test(intended)) return parseDigits(actual) === intended;
+  if (/^\d+\.\d+$/.test(intended)) return Number(actual.replace(/,/g, '')) === Number(intended);
   return actual.trim() === intended.trim();
 }
 
-async function applySelectField(
+async function applySelectField<T>(
   root: HTMLElement,
-  field: FieldDescriptor,
+  field: FieldDescriptor<T>,
   value: string,
   report: Report,
 ): Promise<void> {
@@ -179,11 +231,11 @@ async function applySelectField(
   report.ok(field.key);
 }
 
-async function applyNgSelectField(
+async function applyNgSelectField<T>(
   root: HTMLElement,
-  field: FieldDescriptor,
+  field: FieldDescriptor<T>,
   code: string,
-  customer: Customer,
+  data: T,
   report: Report,
 ): Promise<void> {
   const host = q<HTMLElement>(root, field.control!);
@@ -192,7 +244,7 @@ async function applyNgSelectField(
     return;
   }
 
-  const label = field.label?.(customer) ?? code;
+  const label = field.label?.(data) ?? code;
   const outcome = await setNgSelect(host, code, label);
 
   if (outcome === 'ok') {
@@ -209,9 +261,9 @@ async function applyNgSelectField(
 }
 
 // The CF number field only appears once a type is chosen, and its `formcontrolname` is unknown.
-async function applyDocNumberField(
+async function applyDocNumberField<T>(
   root: HTMLElement,
-  field: FieldDescriptor,
+  field: FieldDescriptor<T>,
   value: string,
   report: Report,
 ): Promise<void> {

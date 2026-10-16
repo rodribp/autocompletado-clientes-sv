@@ -8,7 +8,7 @@ import { JSDOM } from 'jsdom';
 // Resolve from cwd: tests compile to `.tmp/`, where `import.meta.url` would point.
 const FIXTURE_DIR = resolve(process.cwd(), process.env.SNAPSHOTS_DIR ?? 'fixtures');
 
-export type FixtureName = 'cf' | 'ccf';
+export type FixtureName = 'cf' | 'ccf' | 'cf-item';
 
 export function fixturePath(name: FixtureName): string {
   return resolve(FIXTURE_DIR, `${name}.html`);
@@ -18,11 +18,20 @@ export function fixturesAvailable(): boolean {
   return existsSync(fixturePath('cf')) && existsSync(fixturePath('ccf'));
 }
 
+// Only the open "Ítem DTE" pop-up, identical in CF and CCF.
+export function itemFixtureAvailable(): boolean {
+  return fixturesAvailable() && existsSync(fixturePath('cf-item'));
+}
+
+export function readFixture(name: FixtureName): string {
+  return readFileSync(fixturePath(name), 'utf8');
+}
+
 export const SKIP_REASON =
   'Form snapshots are missing (not versioned). See tests/README.md.';
 
 export function loadFixture(name: FixtureName): JSDOM {
-  const dom = new JSDOM(readFileSync(fixturePath(name), 'utf8'), { url: `https://admin.factura.gob.sv/${name}` });
+  const dom = new JSDOM(readFixture(name), { url: `https://admin.factura.gob.sv/${name}` });
 
   const g = globalThis as unknown as Record<string, unknown>;
   g.window = dom.window;
