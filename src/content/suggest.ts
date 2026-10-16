@@ -1,14 +1,15 @@
-// Password-manager-style suggestions under the item pop-up's Producto and Código fields.
-// Light DOM, not shadow DOM, so `aria-activedescendant` can reach the options.
+// Password-manager-style suggestions under portal fields: products in the item pop-up,
+// customers in the Receptor. Light DOM, not shadow DOM, so `aria-activedescendant` can reach the options.
 
 import { ERROR_MESSAGES, T, fieldLabel } from '../common/i18n.js';
-import { sendToBackground } from '../common/messages.js';
-import { formatPrice } from '../common/normalize.js';
-import { SALE_TYPES, type Product } from '../common/types.js';
-import { detectFormType } from './forms/detect.js';
-import { FillError, fillItem } from './forms/fill.js';
+import { sendToBackground, type FillReport, type FormType, type Res } from '../common/messages.js';
+import { formatDocNumber, formatNrc, formatPrice } from '../common/normalize.js';
+import { DOC_TYPES, SALE_TYPES, ccfIssues, type Customer, type Product } from '../common/types.js';
+import { pushCatalog } from './forms/capture.js';
+import { CF_KNOWN_CONTROLS } from './forms/cf.js';
+import { detectFormType, recipientRoot } from './forms/detect.js';
+import { FillError, fillItem, fillRecipient } from './forms/fill.js';
 
-const FIELDS = 'nuevo-item-doc [formcontrolname="producto"], nuevo-item-doc [formcontrolname="codigoProducto"]';
 const LIST_ID = 'acsv-suggestions';
 const LIMIT = 8;
 
@@ -24,9 +25,66 @@ const STYLE = `
 .acsv-status { padding: 6px 8px; color: #b42318; }
 `;
 
+interface Source<T> {
+  /** `aria-label` of the list. */
+  label: string;
+  matches(el: Element, formType: FormType): boolean;
+  query(q: string): Promise<Res<T[]>>;
+  title(item: T): string;
+  meta(item: T, formType: FormType): string;
+  fill(item: T, formType: FormType): Promise<FillReport>;
+}
+
+const products: Source<Product> = {
+  label: 'Productos guardados',
+  matches: (el) =>
+    el.matches('nuevo-item-doc [formcontrolname="producto"], nuevo-item-doc [formcontrolname="codigoProducto"]'),
+  query: (q) => sendToBackground('QUERY_PRODUCTS', { q, limit: LIMIT }),
+  title: (p) => p.description,
+  meta: (p) =>
+    [p.code, formatPrice(p.price), p.saleType === 'G' ? '' : SALE_TYPES[p.saleType]].filter(Boolean).join(' · '),
+  fill: fillItem,
+};
+
+const customers: Source<Customer> = {
+  label: 'Clientes guardados',
+  matches: isCustomerSearchField,
+  query: (q) => sendToBackground('QUERY_CUSTOMERS', { q, limit: LIMIT }),
+  title: (c) => c.name,
+  meta: (c, formType) =>
+    [
+      `${DOC_TYPES[c.docType]} ${formatDocNumber(c.docType, c.docNumber)}`,
+      c.nrc ? `NRC ${formatNrc(c.nrc)}` : '',
+      formType === 'ccf' && ccfIssues(c).length > 0 ? T.notCcfEligible : '',
+    ]
+      .filter(Boolean)
+      .join(' · '),
+  fill: async (c, formType) => {
+    const report = await fillRecipient(c, formType);
+    // The cascade just rendered municipalities and districts: learn them, as «Rellenar» does.
+    void pushCatalog(formType);
+    return report;
+  },
+};
+
+const SOURCES = [products, customers] as Source<unknown>[];
+
+// Name, NRC and NIT, only inside the Receptor: the Emisor reuses the same control names.
+function isCustomerSearchField(el: Element, formType: FormType): boolean {
+  if (!recipientRoot(formType)?.contains(el)) return false;
+  // ng-select's own search box has no `formcontrolname`.
+  const name = el.getAttribute('formcontrolname');
+  if (!name) return false;
+  if (name === 'nombre' || name === 'nrc') return true;
+  if (formType === 'ccf') return name === 'nit';
+  // CF's document number has no fixed name: it is whatever the known list doesn't cover.
+  return !CF_KNOWN_CONTROLS.has(name);
+}
+
 let input: HTMLInputElement | null = null;
 let list: HTMLElement | null = null;
-let items: Product[] = [];
+let source: Source<unknown> | null = null;
+let items: unknown[] = [];
 let active = -1;
 let requestSeq = 0;
 // The fill fires synthetic focus/input events on these same fields; they must not reopen the list.
@@ -39,21 +97,25 @@ export function installSuggestions(doc: Document = document): void {
   doc.addEventListener('focusout', () => close(), true);
 }
 
-function field(event: Event): HTMLInputElement | null {
+function target(event: Event): { el: HTMLInputElement; src: Source<unknown>; formType: FormType } | null {
   const el = event.target as Element | null;
-  return el?.tagName === 'INPUT' && el.matches(FIELDS) ? (el as HTMLInputElement) : null;
+  if (el?.tagName !== 'INPUT') return null;
+  const formType = detectFormType();
+  if (!formType) return null;
+  const src = SOURCES.find((s) => s.matches(el, formType));
+  return src ? { el: el as HTMLInputElement, src, formType } : null;
 }
 
 function onFocusOrInput(event: Event): void {
-  const el = field(event);
-  if (el && !applying) void refresh(el);
+  const t = target(event);
+  if (t && !applying) void refresh(t.el, t.src, t.formType);
 }
 
-async function refresh(el: HTMLInputElement): Promise<void> {
+async function refresh(el: HTMLInputElement, src: Source<unknown>, formType: FormType): Promise<void> {
   const seq = ++requestSeq;
   let result;
   try {
-    result = await sendToBackground('QUERY_PRODUCTS', { q: el.value, limit: LIMIT });
+    result = await src.query(el.value);
   } catch {
     // After an extension update the old content script loses its context and `sendMessage` throws.
     return;
@@ -65,17 +127,17 @@ async function refresh(el: HTMLInputElement): Promise<void> {
     close();
     return;
   }
-  open(el, result.data);
+  open(el, src, formType, result.data);
 }
 
 function onKeyDown(event: KeyboardEvent): void {
-  const el = field(event);
-  if (!el) return;
+  const t = target(event);
+  if (!t) return;
 
   if (!list || items.length === 0) {
     if (event.key === 'ArrowDown') {
       event.preventDefault();
-      void refresh(el);
+      void refresh(t.el, t.src, t.formType);
     }
     return;
   }
@@ -90,7 +152,7 @@ function onKeyDown(event: KeyboardEvent): void {
       if (active < 0) return;
       event.preventDefault();
       event.stopPropagation();
-      void pick(items[active]!);
+      void pick(items[active]);
       return;
     case 'Escape':
       // The portal's pop-up closes on Esc too; only our list should.
@@ -101,18 +163,19 @@ function onKeyDown(event: KeyboardEvent): void {
   }
 }
 
-function open(el: HTMLInputElement, products: Product[]): void {
+function open(el: HTMLInputElement, src: Source<unknown>, formType: FormType, found: unknown[]): void {
   const doc = el.ownerDocument;
   ensureStyle(doc);
 
-  if (input !== el || !list?.isConnected) {
+  if (input !== el || source !== src || !list?.isConnected) {
     close();
     input = el;
+    source = src;
     list = doc.createElement('div');
     list.id = LIST_ID;
     list.className = 'acsv-list';
     list.setAttribute('role', 'listbox');
-    list.setAttribute('aria-label', 'Productos guardados');
+    list.setAttribute('aria-label', src.label);
     el.insertAdjacentElement('afterend', list);
 
     el.setAttribute('role', 'combobox');
@@ -120,14 +183,14 @@ function open(el: HTMLInputElement, products: Product[]): void {
     el.setAttribute('aria-controls', LIST_ID);
   }
 
-  items = products;
+  items = found;
   active = -1;
-  list.replaceChildren(...products.map((p, i) => option(doc, p, i)));
+  list.replaceChildren(...found.map((item, i) => option(doc, src, formType, item, i)));
   el.setAttribute('aria-expanded', 'true');
   el.removeAttribute('aria-activedescendant');
 }
 
-function option(doc: Document, product: Product, index: number): HTMLElement {
+function option(doc: Document, src: Source<unknown>, formType: FormType, item: unknown, index: number): HTMLElement {
   const row = doc.createElement('div');
   row.id = `${LIST_ID}-${index}`;
   row.className = 'acsv-option';
@@ -136,23 +199,17 @@ function option(doc: Document, product: Product, index: number): HTMLElement {
 
   const title = doc.createElement('div');
   title.className = 'acsv-title';
-  title.textContent = product.description;
+  title.textContent = src.title(item);
 
   const meta = doc.createElement('div');
   meta.className = 'acsv-meta';
-  meta.textContent = [
-    product.code,
-    formatPrice(product.price),
-    product.saleType === 'G' ? '' : SALE_TYPES[product.saleType],
-  ]
-    .filter(Boolean)
-    .join(' · ');
+  meta.textContent = src.meta(item, formType);
 
   row.append(title, meta);
   // `mousedown`, not `click`: keep focus in the field so `focusout` doesn't close the list first.
   row.addEventListener('mousedown', (event) => {
     event.preventDefault();
-    void pick(product);
+    void pick(item);
   });
   return row;
 }
@@ -167,20 +224,23 @@ function select(index: number): void {
   list.children[active]?.scrollIntoView?.({ block: 'nearest' });
 }
 
-async function pick(product: Product): Promise<void> {
+async function pick(item: unknown): Promise<void> {
   const el = input;
+  const src = source;
   const formType = detectFormType();
   close();
-  if (!el || !formType) return;
+  if (!el || !src || !formType) return;
 
   applying = true;
   try {
-    const report = await fillItem(product, formType);
-    const failed = report.skipped.filter((s) => s.reason !== 'EMPTY_VALUE');
-    if (failed.length > 0) showStatus(el, `${T.noFill}: ${failed.map((f) => fieldLabel(f.key)).join(', ')}.`);
+    const report = await src.fill(item, formType);
+    // `NOT_ELIGIBLE_CCF` is already shown on the option itself.
+    const failed = report.skipped.filter((s) => s.reason !== 'EMPTY_VALUE' && s.reason !== 'NOT_ELIGIBLE_CCF');
+    if (failed.length > 0) showStatus(el, formType, `${T.noFill}: ${failed.map((f) => fieldLabel(f.key)).join(', ')}.`);
   } catch (error) {
     showStatus(
       el,
+      formType,
       error instanceof FillError && error.code === 'INVALID_PRODUCT'
         ? `${ERROR_MESSAGES.INVALID_PRODUCT} ${error.message}`
         : `${T.noFill}.`,
@@ -190,8 +250,13 @@ async function pick(product: Product): Promise<void> {
   }
 }
 
-// Failing silently would leave a half-filled line the user might confirm.
-function showStatus(el: HTMLInputElement, message: string): void {
+// Failing silently would leave half-filled data the user might confirm.
+function showStatus(field: HTMLInputElement, formType: FormType, message: string): void {
+  // Changing the CF document type re-renders the number field, so it may be gone by now.
+  const el = field.isConnected
+    ? field
+    : recipientRoot(formType)?.querySelector<HTMLInputElement>('[formcontrolname="nombre"]');
+  if (!el) return;
   const doc = el.ownerDocument;
   ensureStyle(doc);
   close();

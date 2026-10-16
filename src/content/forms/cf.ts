@@ -45,6 +45,7 @@ export const CF_SCHEMA: FormSchema = {
     {
       key: 'nrc',
       control: 'nrc',
+      clearWhenEmpty: true,
       kind: 'text',
       order: 40,
       maxlength: 7,
@@ -93,6 +94,7 @@ export const CF_SCHEMA: FormSchema = {
     {
       key: 'details',
       control: 'complemento',
+      clearWhenEmpty: true,
       kind: 'textarea',
       order: 90,
       maxlength: 200,
@@ -101,6 +103,7 @@ export const CF_SCHEMA: FormSchema = {
     {
       key: 'email',
       control: 'correoReceptor',
+      clearWhenEmpty: true,
       kind: 'text',
       order: 100,
       maxlength: 100,
@@ -109,6 +112,7 @@ export const CF_SCHEMA: FormSchema = {
     {
       key: 'phone',
       control: 'telefonoReceptor',
+      clearWhenEmpty: true,
       kind: 'text',
       order: 110,
       maxlength: 8,

@@ -2,7 +2,7 @@ import { canonDocNumber, parseActivityLabel, parseDigits, squish } from '../../c
 import { emptyAddress, isDocType, type Customer, type DocType } from '../../common/types.js';
 import type { CatalogDelta } from '../../common/catalog.js';
 import { districtKey, type CatalogEntry } from '../../common/catalog.js';
-import type { CaptureResult, FieldKey, FormType } from '../../common/messages.js';
+import { sendToBackground, type CaptureResult, type FieldKey, type FormType } from '../../common/messages.js';
 import { q, recipientRoot } from './detect.js';
 
 // `value` Angular assigns to the placeholder option.
@@ -135,4 +135,15 @@ function readOptions(root: HTMLElement, control: string): CatalogEntry[] {
       return { code, name };
     })
     .filter((entry) => entry.code !== '' && !ANGULAR_PLACEHOLDER.test(entry.code));
+}
+
+// After a fill or a capture the portal has rendered the lists, so learn them.
+export async function pushCatalog(formType: FormType): Promise<void> {
+  try {
+    const delta = harvestCatalog(formType);
+    if (!delta.municipalities && !delta.districts) return;
+    await sendToBackground('PUT_CATALOG', delta);
+  } catch {
+    // The catalog is a bonus; a failure here must not affect filling.
+  }
 }

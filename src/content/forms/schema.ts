@@ -19,7 +19,7 @@ export interface FieldDescriptor<T = Customer> {
   optional?: boolean;
   maxlength?: number;
   dependsOn?: FieldKey;
-  /** Text only: an empty value clears the control instead of leaving the previous value. */
+  /** Text only: no stored value empties the control instead of keeping what a previous fill left. */
   clearWhenEmpty?: boolean;
   /** `null`: no stored value for this field. */
   value(data: T): string | null;

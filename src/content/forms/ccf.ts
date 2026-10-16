@@ -8,6 +8,7 @@ export const CCF_SCHEMA: FormSchema = {
     {
       key: 'nit',
       control: 'nit',
+      clearWhenEmpty: true,
       kind: 'text',
       order: 10,
       maxlength: 14,
@@ -25,6 +26,7 @@ export const CCF_SCHEMA: FormSchema = {
     {
       key: 'nrc',
       control: 'nrc',
+      clearWhenEmpty: true,
       kind: 'text',
       order: 30,
       maxlength: 7,
@@ -33,6 +35,7 @@ export const CCF_SCHEMA: FormSchema = {
     {
       key: 'tradeName',
       control: 'nombreComercial',
+      clearWhenEmpty: true,
       kind: 'text',
       order: 40,
       maxlength: 150,
@@ -83,6 +86,7 @@ export const CCF_SCHEMA: FormSchema = {
     {
       key: 'details',
       control: 'complemento',
+      clearWhenEmpty: true,
       kind: 'textarea',
       order: 90,
       maxlength: 200,
@@ -91,6 +95,7 @@ export const CCF_SCHEMA: FormSchema = {
     {
       key: 'email',
       control: 'correo',
+      clearWhenEmpty: true,
       kind: 'text',
       order: 100,
       maxlength: 100,
@@ -99,6 +104,7 @@ export const CCF_SCHEMA: FormSchema = {
     {
       key: 'phone',
       control: 'telefono',
+      clearWhenEmpty: true,
       kind: 'text',
       order: 110,
       maxlength: 8,

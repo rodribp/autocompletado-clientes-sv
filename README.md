@@ -13,7 +13,9 @@ extensión aporta esa pieza sin que tengas que cambiar de sistema ni pagar una s
 - Guarda tus clientes **en tu propio navegador**: nombre, NIT o DUI, NRC, nombre comercial,
   actividad económica, dirección completa, correo y teléfono.
 - Rellena el receptor de una **Factura (CF)** o un **Crédito Fiscal (CCF)** con un clic,
-  incluida la cascada departamento → municipio → distrito.
+  incluida la cascada departamento → municipio → distrito. Puedes hacerlo desde el icono o,
+  más rápido, escribiendo en **Nombre**, **NIT** o **NRC** del Receptor y eligiendo al cliente
+  de la lista que aparece debajo.
 - **«Guardar cliente actual»**: rellena un documento a mano una sola vez y la extensión se
   queda con los datos exactos, incluidos los códigos de municipio, distrito y actividad que
   el portal no publica en ninguna parte legible.
@@ -42,7 +44,11 @@ extensión aporta esa pieza sin que tengas que cambiar de sistema ni pagar una s
 
 1. Entra a <https://admin.factura.gob.sv> y abre una Factura o un Crédito Fiscal.
    El icono de la extensión mostrará `CF` o `CCF`.
-2. Pulsa el icono, busca al cliente y dale a **Rellenar**.
+2. Escribe en **Nombre**, **NIT** (o número de documento en la Factura) o **NRC** del
+   Receptor: debajo aparecen tus clientes que coinciden, por nombre sin importar acentos o por
+   los dígitos del NIT/DUI y del NRC. Elige uno con el ratón o con `↓` y `Enter`. También
+   puedes pulsar el icono, buscar al cliente y darle a **Rellenar**. Al cambiar de cliente se
+   vacían los datos de texto que el nuevo no tenga (correo, teléfono, NRC…).
 3. ¿Cliente nuevo? Rellena el receptor como siempre y pulsa **Guardar cliente actual**:
    la extensión lee lo que está en pantalla y te abre el formulario ya lleno para que
    solo revises y guardes.

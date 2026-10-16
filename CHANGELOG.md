@@ -23,5 +23,15 @@ y el versionado es [semántico](https://semver.org/lang/es/).
 - Sugerencias dentro del portal: al escribir en **Producto** o **Código** de la ventana
   «Producto o Servicio» aparecen tus productos guardados; elegir uno rellena la ventana
   (respetando la cantidad escrita) y tú confirmas con «Agregar ítem».
+- Sugerencias de clientes en el Receptor: al escribir en **Nombre**, **NIT** (o número de
+  documento en la Factura) o **NRC** aparecen tus clientes guardados; elegir uno rellena el
+  Receptor. Nunca se activan en el Emisor.
 - Comando **Diagnóstico**, para saber qué campos dejó de encontrar la extensión si el
   portal cambia su maquetación.
+
+### Corregido
+
+- Al rellenar otro cliente u otro producto, los campos de texto que el nuevo no tiene se
+  vacían en vez de conservar el dato anterior (por ejemplo, el correo del cliente anterior).
+- Un cliente sin dirección ya no muestra «falló el campo del que depende» en municipio y
+  distrito.
