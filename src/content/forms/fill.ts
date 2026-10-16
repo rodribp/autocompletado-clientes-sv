@@ -42,8 +42,9 @@ class Report {
     this.skipped.push(entry);
   }
 
+  // "No stored value" isn't a failure: a customer without an address has no municipality either.
   failed(key: FieldKey): boolean {
-    return this.skipped.some((s) => s.key === key);
+    return this.skipped.some((s) => s.key === key && s.reason !== 'EMPTY_VALUE');
   }
 
   finish(): FillReport {
@@ -136,7 +137,11 @@ async function applyField<T>(
   const raw = field.value(data);
 
   if (raw === null || raw === '') {
-    if (field.clearWhenEmpty) return applyTextField(root, field, '', report);
+    // Don't leave the previous customer's or product's value behind.
+    if (field.clearWhenEmpty) {
+      const el = q<HTMLInputElement | HTMLTextAreaElement>(root, field.control!);
+      if (el?.value) setText(el, '');
+    }
     // In CCF a null `nit` isn't missing data: the customer isn't eligible for a CCF.
     if (formType === 'ccf' && field.key === 'nit') {
       report.skip(field.key, 'NOT_ELIGIBLE_CCF');

@@ -18,7 +18,7 @@ npm test        # compiles tests/ to .tmp/ and runs node --test
 | `dom/selects.test.ts` | Dropdowns are matched by code, never by text |
 | `dom/docnumber.test.ts` | The deferred document number slot in CF |
 | `dom/item.test.ts` | The item pop-up: every field resolves inside `<nuevo-item-doc>`, the option codes match, filling never leaks outside it, invalid stored products are refused, the typed quantity is kept |
-| `dom/suggest.test.ts` | In-page suggestions: they appear only under Producto/Código, keys work, Esc doesn't close the portal's pop-up, late answers are dropped |
+| `dom/suggest.test.ts` | In-page suggestions: products under Producto/Código; customers under the Receptor's Nombre/NIT/NRC (and CF's document number) but **never in the Emisor**; keys work, Esc doesn't close the portal's pop-up, late answers are dropped, switching customers clears the previous email |
 | `dom/ngselect.test.ts` | The `<ng-select>` driver against a synthetic double |
 | `dom/popup.test.ts` | Popup smoke tests against the `dist/` bundle |
 | `dom/import.test.ts` | Import page smoke tests against the `dist/` bundle |
@@ -86,6 +86,11 @@ Do it at least once per published version.
 12. Pick a product with a code, then one without: Código ends up empty.
 13. Set a product's `price` to `-1` in `chrome.storage.local` → picking it shows the reason
     under the field and fills nothing.
+14. `/ccf`: type part of a customer's name in the Receptor's Nombre, then a few NIT digits in
+    NIT, then NRC digits in NRC: each shows the matching customers. Pick one: the Receptor
+    fills, including the cascade. Pick another one without email: Correo ends up empty.
+    **Type in the Emisor's Nombre and NRC: no list appears.**
+15. `/cf`: choose NIT as document type and type digits in the number field: it suggests.
 
 ## CF's document number `formcontrolname`
 

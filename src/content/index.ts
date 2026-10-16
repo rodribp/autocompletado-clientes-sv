@@ -2,7 +2,6 @@ import {
   err,
   ok,
   respondAsync,
-  sendToBackground,
   type DiagnoseResult,
   type Envelope,
   type FieldKey,
@@ -11,7 +10,7 @@ import {
   type ToContentKind,
 } from '../common/messages.js';
 import type { Customer } from '../common/types.js';
-import { captureRecipient, harvestCatalog } from './forms/capture.js';
+import { captureRecipient, harvestCatalog, pushCatalog } from './forms/capture.js';
 import { detectFormType, recipientRoot, q } from './forms/detect.js';
 import { FillError, fillRecipient, schemaFor } from './forms/fill.js';
 import { installSuggestions } from './suggest.js';
@@ -77,14 +76,4 @@ function diagnose(formType: FormType): DiagnoseResult {
   }
 
   return { formType, found, missing };
-}
-
-async function pushCatalog(formType: FormType): Promise<void> {
-  try {
-    const delta = harvestCatalog(formType);
-    if (!delta.municipalities && !delta.districts) return;
-    await sendToBackground('PUT_CATALOG', delta);
-  } catch {
-    // The catalog is a bonus; a failure here must not affect filling.
-  }
 }

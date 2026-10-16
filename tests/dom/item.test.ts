@@ -120,7 +120,7 @@ test('switching to a product without a code clears the previous code', { skip },
 
   assert.equal(control('codigoProducto').value, '');
   assert.equal(control('producto').value, 'Azúcar');
-  assert.deepEqual(report.skipped, []);
+  assert.deepEqual(report.skipped, [{ key: 'code', reason: 'EMPTY_VALUE' }], 'cleared, not counted as filled');
 });
 
 test('fillItem refuses an invalid stored product and touches nothing', { skip }, async () => {
