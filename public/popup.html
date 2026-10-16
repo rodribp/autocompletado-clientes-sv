@@ -3,12 +3,15 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Clientes</title>
+    <title>Clientes y productos</title>
     <link rel="stylesheet" href="popup.css" />
   </head>
   <body>
     <header class="topbar">
-      <h1>Clientes</h1>
+      <nav class="tabs" role="tablist" aria-label="Sección">
+        <button id="tab-customers" type="button" role="tab" aria-selected="true" aria-controls="list-view">Clientes</button>
+        <button id="tab-products" type="button" role="tab" aria-selected="false" aria-controls="products-view">Productos</button>
+      </nav>
       <span id="badge" class="badge" hidden></span>
       <div class="menu">
         <button id="btn-menu" class="icon-btn" aria-haspopup="true" aria-expanded="false" title="Más opciones">⋯</button>
@@ -22,7 +25,7 @@
 
     <p id="notice" class="banner" hidden></p>
 
-    <section id="list-view">
+    <section id="list-view" role="tabpanel" aria-labelledby="tab-customers">
       <div class="toolbar">
         <input id="search" type="search" placeholder="Buscar por nombre, NIT o NRC" autocomplete="off" />
         <button id="btn-new" class="primary">Nuevo</button>
@@ -129,6 +132,73 @@
         <div class="actions">
           <button type="submit" class="primary">Guardar</button>
           <button type="button" id="btn-cancel-edit" class="subtle">Volver</button>
+        </div>
+      </form>
+    </section>
+
+    <section id="products-view" role="tabpanel" aria-labelledby="tab-products" hidden>
+      <div class="toolbar">
+        <input id="product-search" type="search" placeholder="Buscar por descripción o código" autocomplete="off" />
+        <button id="btn-new-product" class="primary">Nuevo</button>
+      </div>
+      <p class="note list-note">Para usarlos, abre «Agregar Ítem → Producto o Servicio» en el portal y escribe en <b>Producto</b> o <b>Código</b>: tus productos aparecen debajo.</p>
+
+      <ul id="product-list" class="list"></ul>
+      <p id="product-empty" class="empty" hidden></p>
+    </section>
+
+    <section id="product-edit-view" hidden>
+      <form id="product-form" novalidate>
+        <h2 id="product-edit-title">Nuevo producto</h2>
+
+        <label class="field">
+          <span>Descripción <b aria-hidden="true">*</b></span>
+          <textarea name="description" rows="2" maxlength="1500" required></textarea>
+          <em class="error" data-error-for="description"></em>
+        </label>
+
+        <div class="row">
+          <label class="field">
+            <span>Tipo</span>
+            <select name="itemType"></select>
+            <em class="error" data-error-for="itemType"></em>
+          </label>
+          <label class="field">
+            <span>Unidad</span>
+            <select name="unit"></select>
+            <em class="error" data-error-for="unit"></em>
+          </label>
+        </div>
+
+        <div class="row">
+          <label class="field">
+            <span>Precio final (lo que paga el cliente) <b aria-hidden="true">*</b></span>
+            <input name="price" type="text" inputmode="decimal" placeholder="11.30" required />
+            <em class="error" data-error-for="price"></em>
+          </label>
+          <label class="field">
+            <span>Tipo de venta</span>
+            <select name="saleType"></select>
+            <em class="error" data-error-for="saleType"></em>
+          </label>
+        </div>
+        <p class="note">Gravado: en crédito fiscal se rellena sin IVA (÷ 1.13) y el portal lo suma después. Exento y no sujeto: el mismo precio en factura y crédito fiscal.</p>
+
+        <label class="field">
+          <span>Código</span>
+          <input name="code" type="text" maxlength="25" placeholder="Opcional" />
+          <em class="error" data-error-for="code"></em>
+        </label>
+
+        <label class="field">
+          <span>Notas</span>
+          <textarea name="notes" rows="2" maxlength="500"></textarea>
+          <em class="error" data-error-for="notes"></em>
+        </label>
+
+        <div class="actions">
+          <button type="submit" class="primary">Guardar</button>
+          <button type="button" id="btn-cancel-product" class="subtle">Volver</button>
         </div>
       </form>
     </section>

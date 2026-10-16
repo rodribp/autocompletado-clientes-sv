@@ -8,7 +8,7 @@ export type FieldKind =
   | 'ngselect'
   | 'dynamicDoc';
 
-export interface FieldDescriptor {
+export interface FieldDescriptor<T = Customer> {
   key: FieldKey;
   /** Absent for `dynamicDoc`, which is discovered at runtime. */
   control?: string;
@@ -19,10 +19,12 @@ export interface FieldDescriptor {
   optional?: boolean;
   maxlength?: number;
   dependsOn?: FieldKey;
-  /** `null`: the customer has no value for this field. */
-  value(customer: Customer): string | null;
+  /** Text only: an empty value clears the control instead of leaving the previous value. */
+  clearWhenEmpty?: boolean;
+  /** `null`: no stored value for this field. */
+  value(data: T): string | null;
   /** `ngselect` only: the option's visible text. */
-  label?(customer: Customer): string;
+  label?(data: T): string;
 }
 
 export interface FormSchema {
@@ -30,7 +32,7 @@ export interface FormSchema {
   fields: FieldDescriptor[];
 }
 
-export function byOrder(a: FieldDescriptor, b: FieldDescriptor): number {
+export function byOrder(a: FieldDescriptor<unknown>, b: FieldDescriptor<unknown>): number {
   return a.order - b.order;
 }
 

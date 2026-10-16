@@ -16,5 +16,12 @@ y el versionado es [semántico](https://semver.org/lang/es/).
   propia pestaña, enseña qué clientes se agregarían y cuáles se sobrescribirían, y no
   escribe nada hasta que lo confirmas.
 - Aviso de aptitud para crédito fiscal por cliente.
+- Productos y servicios: pestaña **Productos** en el popup para guardarlos. Se guarda el
+  precio final (lo que paga el cliente) y se rellena sin IVA en el crédito fiscal cuando el
+  ítem es gravado. El respaldo JSON incluye los productos; un respaldo antiguo, sin productos,
+  no borra los que tengas.
+- Sugerencias dentro del portal: al escribir en **Producto** o **Código** de la ventana
+  «Producto o Servicio» aparecen tus productos guardados; elegir uno rellena la ventana
+  (respetando la cantidad escrita) y tú confirmas con «Agregar ítem».
 - Comando **Diagnóstico**, para saber qué campos dejó de encontrar la extensión si el
   portal cambia su maquetación.

@@ -7,14 +7,18 @@ const store = installChromeStub();
 const {
   applyImport,
   deleteCustomer,
+  deleteProduct,
   exportJson,
   importJson,
   listCustomers,
+  listProducts,
   migrate,
   planImport,
   readDb,
   saveCustomer,
+  saveProduct,
   searchCustomers,
+  searchProducts,
 } = await import('../../src/common/storage.ts');
 const { emptyAddress } = await import('../../src/common/types.ts');
 
@@ -195,4 +199,74 @@ test('importing in replace mode discards previous data', async () => {
 test('readDb always returns an array of customers', async () => {
   const db = await readDb();
   assert.ok(Array.isArray(db.customers), 'the original bug returned an object here');
+});
+
+function product(description: string, price = 5) {
+  return { description, itemType: '1' as const, unit: '59', saleType: 'G' as const, price };
+}
+
+test('products are saved, updated, searched and deleted on their own key', async () => {
+  const created = await saveProduct(product('Café molido 1 lb'));
+  await saveProduct(product('Azúcar'));
+  await saveProduct({ ...product('Café molido 1 lb', 6), id: created.id });
+
+  const all = await listProducts();
+  assert.deepEqual(all.map((p) => p.description), ['Azúcar', 'Café molido 1 lb']);
+  assert.equal(all[1]!.price, 6, 'saving with the same id updates');
+  assert.equal(store.data.db, undefined, 'customers are untouched');
+
+  assert.equal(searchProducts(all, 'cafe')[0]?.id, created.id, 'search ignores accents');
+
+  await deleteProduct(created.id);
+  assert.deepEqual((await listProducts()).map((p) => p.description), ['Azúcar']);
+});
+
+test('a backup carries products and round-trips', async () => {
+  await saveCustomer(draft('Uno'));
+  await saveProduct(product('Café'));
+  const backup = await exportJson();
+
+  store.reset();
+  const report = await importJson(backup, 'merge');
+
+  assert.equal(report.products, 1);
+  assert.equal((await listProducts())[0]!.description, 'Café');
+  assert.equal((await listCustomers()).length, 1);
+});
+
+test('an old backup without products keeps the stored products', async () => {
+  await saveProduct(product('Café'));
+  const old = JSON.stringify({ customers: [{ id: 'z', name: 'Nuevo', docType: '36', docNumber: '1', address: emptyAddress() }] });
+
+  await importJson(old, 'replace');
+
+  assert.equal((await listProducts()).length, 1, 'replace must not erase products the file does not mention');
+  assert.equal((await listCustomers()).length, 1);
+});
+
+test('replace mode replaces products too when the backup has them', async () => {
+  await saveProduct(product('Viejo'));
+  const content = JSON.stringify({ customers: [], products: [{ id: 'p', ...product('Nuevo') }, { roto: true }] });
+
+  const plan = await planImport(content);
+  assert.equal(plan.products?.length, 1, 'corrupt products are dropped');
+
+  await applyImport(plan.valid, plan.skipped, 'replace', plan.products);
+  assert.deepEqual((await listProducts()).map((p) => p.description), ['Nuevo']);
+});
+
+test('planImport splits products into additions and overwrites', async () => {
+  const stored = await saveProduct(product('Café', 5));
+  const content = JSON.stringify({
+    customers: [],
+    products: [{ ...stored, price: 6 }, { id: 'n', ...product('Azúcar') }],
+  });
+
+  const plan = await planImport(content);
+
+  assert.deepEqual(plan.productsAdded.map((p) => p.description), ['Azúcar']);
+  assert.equal(plan.productCollisions.length, 1);
+  assert.equal(plan.productCollisions[0]!.existing.price, 5, 'the stored version is kept for the preview');
+  assert.equal(plan.existingProducts, 1);
+  assert.equal((await listProducts())[0]!.price, 5, 'planImport writes nothing');
 });

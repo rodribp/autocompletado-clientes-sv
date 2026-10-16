@@ -2,10 +2,9 @@
 // <input type="file"> `change` event never arrives.
 
 import { T } from '../common/i18n.js';
-import { DOC_TYPES } from '../common/types.js';
-import { formatDocNumber } from '../common/normalize.js';
+import { DOC_TYPES, SALE_TYPES, type Customer, type Product } from '../common/types.js';
+import { formatDocNumber, formatPrice } from '../common/normalize.js';
 import { applyImport, planImport, type ImportPlan } from '../common/storage.js';
-import type { Customer } from '../common/types.js';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -67,7 +66,7 @@ async function loadFile(file: File): Promise<void> {
     return;
   }
 
-  if (plan.valid.length === 0) {
+  if (plan.valid.length === 0 && !plan.products?.length) {
     const detail =
       plan.skipped > 0
         ? `El archivo tiene ${plan.skipped} ${plan.skipped === 1 ? 'registro' : 'registros'}, pero ninguno es un cliente completo.`
@@ -84,9 +83,11 @@ async function loadFile(file: File): Promise<void> {
 function renderPreview(file: File): void {
   if (!plan) return;
 
-  $('file-name').textContent = `${file.name} — ${plan.valid.length} ${
-    plan.valid.length === 1 ? 'cliente' : 'clientes'
-  } en el archivo.`;
+  const products = plan.products?.length ?? 0;
+  $('file-name').textContent =
+    `${file.name} — ${plan.valid.length} ${plan.valid.length === 1 ? 'cliente' : 'clientes'}` +
+    (products > 0 ? ` y ${products} ${products === 1 ? 'producto' : 'productos'}` : '') +
+    ' en el archivo.';
 
   $('n-added').textContent = String(plan.added.length);
   $('n-updated').textContent = String(plan.collisions.length);
@@ -99,8 +100,8 @@ function renderPreview(file: File): void {
   if (plan.added.length > 0) {
     details.append(
       listBlock(
-        `Se agregarían (${plan.added.length})`,
-        plan.added.map((c) => row(c)),
+        `Clientes que se agregarían (${plan.added.length})`,
+        plan.added.map((c) => row(c.name, doc(c))),
         plan.collisions.length === 0,
       ),
     );
@@ -109,8 +110,30 @@ function renderPreview(file: File): void {
   if (plan.collisions.length > 0) {
     details.append(
       listBlock(
-        `Se sobrescribirían (${plan.collisions.length})`,
-        plan.collisions.map(({ incoming, existing }) => collisionRow(incoming, existing)),
+        `Clientes que se sobrescribirían (${plan.collisions.length})`,
+        plan.collisions.map(({ incoming, existing }) => row(incoming.name, doc(incoming), existing.name)),
+        true,
+      ),
+    );
+  }
+
+  if (plan.productsAdded.length > 0) {
+    details.append(
+      listBlock(
+        `Productos que se agregarían (${plan.productsAdded.length})`,
+        plan.productsAdded.map((p) => row(p.description, price(p))),
+        plan.productCollisions.length === 0,
+      ),
+    );
+  }
+
+  if (plan.productCollisions.length > 0) {
+    details.append(
+      listBlock(
+        `Productos que se sobrescribirían (${plan.productCollisions.length})`,
+        plan.productCollisions.map(({ incoming, existing }) =>
+          row(incoming.description, price(incoming, existing), existing.description),
+        ),
         true,
       ),
     );
@@ -126,24 +149,39 @@ function renderModeWarning(): void {
 
   if (!plan) return;
 
+  const products = plan.products?.length ?? 0;
+  const andProducts = products > 0 ? ` y ${plural(products, 'producto', 'productos')}` : '';
+
   if (mode() === 'merge') {
     warn.hidden = true;
     confirm.textContent =
-      plan.collisions.length > 0
+      (plan.collisions.length > 0
         ? `Importar ${plan.added.length} y actualizar ${plan.collisions.length}`
-        : `Importar ${plan.added.length} ${plan.added.length === 1 ? 'cliente' : 'clientes'}`;
+        : `Importar ${plural(plan.added.length, 'cliente', 'clientes')}`) + andProducts;
     return;
   }
 
-  const lost = plan.existingTotal - plan.collisions.length;
+  // A backup without products leaves them alone, so only count losses when it has them.
+  const lostCustomers = plan.existingTotal - plan.collisions.length;
+  const lostProducts = plan.products ? plan.existingProducts - plan.productCollisions.length : 0;
+  const lost = [
+    lostCustomers > 0 ? plural(lostCustomers, 'cliente', 'clientes') : '',
+    lostProducts > 0 ? plural(lostProducts, 'producto', 'productos') : '',
+  ].filter(Boolean);
+  const one = lostCustomers + lostProducts === 1;
+
   warn.hidden = false;
   warn.textContent =
-    lost > 0
-      ? `Se borrarán ${lost} ${lost === 1 ? 'cliente que tienes guardado y que no está' : 'clientes que tienes guardados y que no están'} en este archivo. No se puede deshacer.`
-      : 'Tus clientes actuales están todos en el archivo, así que no se perderá ninguno.';
-  confirm.textContent = `Reemplazar todo por ${plan.valid.length} ${
-    plan.valid.length === 1 ? 'cliente' : 'clientes'
-  }`;
+    lost.length > 0
+      ? `${one ? 'Se borrará' : 'Se borrarán'} ${lost.join(' y ')} que ${
+          one ? 'tienes guardado y que no está' : 'tienes guardados y que no están'
+        } en este archivo. No se puede deshacer.`
+      : 'Todo lo que tienes guardado está en el archivo, así que no se perderá nada.';
+  confirm.textContent = `Reemplazar todo por ${plural(plan.valid.length, 'cliente', 'clientes')}${andProducts}`;
+}
+
+function plural(n: number, one: string, many: string): string {
+  return `${n} ${n === 1 ? one : many}`;
 }
 
 async function confirmImport(): Promise<void> {
@@ -155,7 +193,7 @@ async function confirmImport(): Promise<void> {
   cancel.disabled = true;
 
   try {
-    const report = await applyImport(plan.valid, plan.skipped, mode());
+    const report = await applyImport(plan.valid, plan.skipped, mode(), plan.products);
     $('report').textContent = `Listo. ${T.importedOk(report)}`;
     showStep('step-done');
   } catch (error) {
@@ -187,19 +225,14 @@ function listBlock(title: string, items: HTMLLIElement[], open: boolean): HTMLDe
   return block;
 }
 
-function row(customer: Customer): HTMLLIElement {
-  const li = document.createElement('li');
-  li.append(customer.name, ' ', doc(customer));
-  return li;
-}
-
-function collisionRow(incoming: Customer, existing: Customer): HTMLLIElement {
+/** `previous`: the stored name a collision would overwrite. */
+function row(name: string, detail: HTMLElement, previous?: string): HTMLLIElement {
   const li = document.createElement('li');
 
-  if (existing.name !== incoming.name) {
+  if (previous !== undefined && previous !== name) {
     const before = document.createElement('span');
     before.className = 'overwritten';
-    before.textContent = existing.name;
+    before.textContent = previous;
 
     const arrow = document.createElement('span');
     arrow.className = 'arrow';
@@ -208,8 +241,20 @@ function collisionRow(incoming: Customer, existing: Customer): HTMLLIElement {
     li.append(before, arrow);
   }
 
-  li.append(incoming.name, ' ', doc(incoming));
+  li.append(name, ' ', detail);
   return li;
+}
+
+// An overwrite that changes the price is the one worth noticing, so show both.
+function price(product: Product, existing?: Product): HTMLElement {
+  const span = document.createElement('span');
+  span.className = 'doc';
+  const now = formatPrice(product.price);
+  const changed = existing && existing.price !== product.price;
+  span.textContent =
+    (changed ? `${formatPrice(existing.price)} → ${now}` : now) +
+    (product.saleType === 'G' ? '' : ` · ${SALE_TYPES[product.saleType]}`);
+  return span;
 }
 
 function doc(customer: Customer): HTMLElement {

@@ -50,6 +50,28 @@ h1 {
   font-size: 15px;
 }
 
+.tabs {
+  display: flex;
+  flex: 1;
+  gap: 4px;
+}
+
+.tabs button {
+  padding: 3px 10px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.tabs button[aria-selected="true"] {
+  border-color: var(--line);
+  background: var(--bg);
+  color: var(--fg);
+}
+
 h2 {
   margin: 0 0 10px;
   font-size: 14px;
@@ -307,8 +329,13 @@ button:focus-visible {
   text-align: center;
 }
 
-#customer-form {
+#customer-form,
+#product-form {
   padding: 10px 12px;
+}
+
+.list-note {
+  margin: 0 12px 8px;
 }
 
 .field {

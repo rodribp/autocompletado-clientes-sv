@@ -1,5 +1,7 @@
 // Spanish only: this centralizes UI text; it is not a translation system.
 
+import type { FieldKey } from './messages.js';
+
 export const T = {
   title: 'Clientes',
   offSite: 'Abre admin.factura.gob.sv para poder rellenar un documento.',
@@ -45,9 +47,10 @@ export const T = {
   exportBackup: 'Exportar respaldo (JSON)',
   importBackup: 'Importar respaldo (JSON)',
   diagnose: 'Diagnóstico',
-  importedOk: (r: { imported: number; updated: number; skipped: number }) =>
+  importedOk: (r: { imported: number; updated: number; skipped: number; products: number }) =>
     `Importados ${r.imported}, actualizados ${r.updated}` +
-    (r.skipped > 0 ? `, omitidos ${r.skipped} por estar incompletos.` : '.'),
+    (r.skipped > 0 ? `, omitidos ${r.skipped} por estar incompletos` : '') +
+    (r.products > 0 ? `; ${r.products} ${r.products === 1 ? 'producto' : 'productos'}.` : '.'),
 
   filledOk: (n: number) => `Receptor rellenado (${n} ${n === 1 ? 'campo' : 'campos'}).`,
   filledPartial: (ok: number, missing: number) =>
@@ -57,6 +60,14 @@ export const T = {
   copied: 'Copiado',
   savedOk: 'Cliente guardado.',
   deletedOk: 'Cliente eliminado.',
+
+  noProducts: 'Todavía no tienes productos. Pulsa «Nuevo» para guardar el primero.',
+  noProductResults: 'Ningún producto coincide con la búsqueda.',
+  newProduct: 'Nuevo producto',
+  editProduct: 'Editar producto',
+  productSavedOk: 'Producto guardado.',
+  productDeletedOk: 'Producto eliminado.',
+  noFill: 'No se pudo rellenar',
 } as const;
 
 export const SKIP_REASONS: Record<string, string> = {
@@ -77,7 +88,36 @@ export const ERROR_MESSAGES: Record<string, string> = {
   PAGE_NOT_SUPPORTED: T.wrongPage,
   PAGE_NOT_READY: 'La página todavía no terminó de cargar. Espera un momento y reintenta.',
   RECIPIENT_ROOT_MISSING: 'No se encontró la sección Receptor en esta página.',
+  INVALID_PRODUCT: 'Este producto tiene datos inválidos. Edítalo y guárdalo de nuevo.',
   NO_TAB: 'No hay ninguna pestaña activa.',
   TIMEOUT: 'La página no respondió a tiempo.',
   UNKNOWN: 'Ocurrió un error inesperado.',
 };
+
+const FIELD_LABELS: Record<FieldKey, string> = {
+  docType: 'Tipo de documento',
+  docNumber: 'Número de documento',
+  nit: 'NIT',
+  name: 'Nombre',
+  tradeName: 'Nombre comercial',
+  nrc: 'NRC',
+  activity: 'Actividad económica',
+  activityDescription: 'Descripción de la actividad',
+  department: 'Departamento',
+  municipality: 'Municipio',
+  district: 'Distrito',
+  details: 'Complemento',
+  email: 'Correo',
+  phone: 'Teléfono',
+  itemType: 'Tipo',
+  quantity: 'Cantidad',
+  unit: 'Unidad',
+  code: 'Código',
+  description: 'Producto',
+  saleType: 'Tipo de venta',
+  price: 'Precio',
+};
+
+export function fieldLabel(key: string): string {
+  return FIELD_LABELS[key as FieldKey] ?? key;
+}

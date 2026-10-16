@@ -1,18 +1,22 @@
 // Only "Fill" and "Save current customer" depend on the tab; CRUD always works.
 
-import { ERROR_MESSAGES, T } from '../common/i18n.js';
-import { sendToTab, type FormType, type Res } from '../common/messages.js';
+import { T, fieldLabel } from '../common/i18n.js';
+import { sendToTab, type FormType } from '../common/messages.js';
 import { deleteCustomer, listCustomers, saveCustomer, searchCustomers } from '../common/storage.js';
 import { validateDraft } from '../common/validate.js';
 import type { Customer } from '../common/types.js';
 import { initEditView, openEditor, readDraft, reloadCatalog, showErrors } from './edit.js';
 import { downloadBackup, openImportPage } from './io.js';
-import { renderList, type ListState } from './list.js';
-import { fieldLabel, hideToast, toast, toastFillReport } from './toast.js';
+import { customerChips, renderList } from './list.js';
+import { initProducts, refreshProducts, showProductList } from './products.js';
+import { hideToast, toast, toastError, toastFillReport } from './toast.js';
 
 const PORTAL_PREFIX = 'https://admin.factura.gob.sv/';
 
 type PageState = 'OFF_SITE' | 'NO_CONTENT_SCRIPT' | 'WRONG_PAGE' | 'READY';
+type Tab = 'customers' | 'products';
+
+const TAB_KEY = 'tab';
 
 interface AppState {
   all: Customer[];
@@ -22,6 +26,7 @@ interface AppState {
   page: PageState;
   formType: FormType | null;
   tabId: number | null;
+  tab: Tab;
 }
 
 const state: AppState = {
@@ -32,6 +37,7 @@ const state: AppState = {
   page: 'OFF_SITE',
   formType: null,
   tabId: null,
+  tab: 'customers',
 };
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -39,16 +45,50 @@ const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as 
 async function main(): Promise<void> {
   await initEditView();
   wireEvents();
-  await Promise.all([refreshCustomers(), refreshPageState()]);
+  await Promise.all([
+    refreshCustomers(),
+    refreshPageState(),
+    initProducts(),
+  ]);
+  showTab(rememberedTab());
 
   // Keep the list fresh if another popup window or the background writes.
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area === 'local' && changes.db) void refreshCustomers();
+    if (area === 'local' && changes.products) void refreshProducts();
     if (area === 'local' && changes.catalog) void reloadCatalog();
   });
 }
 
+// localStorage can throw (blocked site data); the tab is only a convenience.
+function rememberedTab(): Tab {
+  try {
+    return localStorage.getItem(TAB_KEY) === 'products' ? 'products' : 'customers';
+  } catch {
+    return 'customers';
+  }
+}
+
+function showTab(tab: Tab): void {
+  state.tab = tab;
+  try {
+    localStorage.setItem(TAB_KEY, tab);
+  } catch {
+    // See `rememberedTab`.
+  }
+
+  $('tab-customers').setAttribute('aria-selected', String(tab === 'customers'));
+  $('tab-products').setAttribute('aria-selected', String(tab === 'products'));
+  $('edit-view').hidden = true;
+  $('product-edit-view').hidden = true;
+  $('list-view').hidden = tab !== 'customers';
+  $('products-view').hidden = tab !== 'products';
+}
+
 function wireEvents(): void {
+  $('tab-customers').addEventListener('click', () => showTab('customers'));
+  $('tab-products').addEventListener('click', () => showTab('products'));
+
   $('search').addEventListener('input', applyFilter);
   $('btn-new').addEventListener('click', () => showEditor(null));
   $('btn-capture').addEventListener('click', () => void captureCurrent());
@@ -101,18 +141,28 @@ function applyFilter(): void {
 }
 
 function render(): void {
-  const listState: ListState = {
-    customers: state.visible,
-    selected: state.selected,
-    confirmingId: state.confirmingId,
-    canFill: state.page === 'READY',
-  };
-
-  renderList(listState, {
-    onFill: (customer) => void fill(customer),
-    onEdit: (customer) => showEditor(customer),
-    onDelete: (customer) => void requestDelete(customer),
-  });
+  const search = $<HTMLInputElement>('search').value;
+  renderList(
+    {
+      list: $<HTMLUListElement>('list'),
+      empty: $('empty'),
+      emptyText: search ? T.noResults : T.noCustomers,
+      fillLabel: T.fill,
+      title: (c) => c.name,
+      chips: customerChips,
+    },
+    {
+      items: state.visible,
+      selected: state.selected,
+      confirmingId: state.confirmingId,
+      canFill: state.page === 'READY',
+    },
+    {
+      onFill: (customer) => void fill(customer),
+      onEdit: (customer) => showEditor(customer),
+      onDelete: (customer) => void requestDelete(customer),
+    },
+  );
 }
 
 async function refreshPageState(): Promise<void> {
@@ -192,7 +242,7 @@ async function fill(customer: Customer): Promise<void> {
   const result = await sendToTab(state.tabId, 'FILL_RECIPIENT', { customer });
 
   if (!result.ok) {
-    reportError(result);
+    toastError(result);
     return;
   }
 
@@ -206,7 +256,7 @@ async function captureCurrent(): Promise<void> {
 
   const result = await sendToTab(state.tabId, 'CAPTURE_RECIPIENT', {});
   if (!result.ok) {
-    reportError(result);
+    toastError(result);
     return;
   }
 
@@ -264,7 +314,7 @@ async function handleDiagnose(): Promise<void> {
 
   const result = await sendToTab(state.tabId, 'DIAGNOSE', {});
   if (!result.ok) {
-    reportError(result);
+    toastError(result);
     return;
   }
 
@@ -276,11 +326,6 @@ async function handleDiagnose(): Promise<void> {
     missing.length === 0 ? 'ok' : 'warn',
     0,
   );
-}
-
-function reportError(result: Res<unknown>): void {
-  if (result.ok) return;
-  toast(ERROR_MESSAGES[result.error.code] ?? result.error.message, 'error', 8000);
 }
 
 function showEditor(customer: Partial<Customer> | null): void {
@@ -297,14 +342,17 @@ function showList(): void {
 }
 
 function editing(): boolean {
-  return !$('edit-view').hidden;
+  return !$('edit-view').hidden || !$('product-edit-view').hidden;
 }
 
 function onKeyDown(event: KeyboardEvent): void {
+  const products = state.tab === 'products';
+
   if (editing()) {
     if (event.key === 'Escape') {
       event.preventDefault();
-      showList();
+      if (products) showProductList();
+      else showList();
     }
     return;
   }
@@ -314,17 +362,20 @@ function onKeyDown(event: KeyboardEvent): void {
 
   if (event.key === '/' && !typing) {
     event.preventDefault();
-    $<HTMLInputElement>('search').focus();
+    $<HTMLInputElement>(products ? 'product-search' : 'search').focus();
     return;
   }
 
+  // Products are only managed here; they reach the portal through its own pop-up.
+  if (products) return;
+
   if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+    const delta = event.key === 'ArrowDown' ? 1 : -1;
     if (state.visible.length === 0) return;
     event.preventDefault();
-    const delta = event.key === 'ArrowDown' ? 1 : -1;
     state.selected = Math.max(0, Math.min(state.visible.length - 1, state.selected + delta));
     render();
-    document.querySelector('.item.sel')?.scrollIntoView({ block: 'nearest' });
+    document.querySelector('#list .item.sel')?.scrollIntoView({ block: 'nearest' });
     return;
   }
 

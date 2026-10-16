@@ -1,8 +1,8 @@
 # Autocompletado de clientes — factura.gob.sv
 
 Extensión de Chrome, libre y gratuita, que guarda la información fiscal de tus clientes
-y rellena de un clic la sección **Receptor** de las facturas y créditos fiscales en
-<https://admin.factura.gob.sv>.
+y tus productos o servicios, y rellena de un clic la sección **Receptor** y la ventana de
+**ítems** de las facturas y créditos fiscales en <https://admin.factura.gob.sv>.
 
 El portal gratuito del Ministerio de Hacienda permite emitir hasta 100 documentos al mes,
 pero —a diferencia de los sistemas de pago— no trae base de datos de clientes. Esta
@@ -17,7 +17,14 @@ extensión aporta esa pieza sin que tengas que cambiar de sistema ni pagar una s
 - **«Guardar cliente actual»**: rellena un documento a mano una sola vez y la extensión se
   queda con los datos exactos, incluidos los códigos de municipio, distrito y actividad que
   el portal no publica en ninguna parte legible.
-- Respaldo en JSON para llevarte tus clientes a otra computadora.
+- Guarda tus **productos y servicios** (descripción, tipo, unidad, tipo de venta, código y
+  precio final) y te los sugiere mientras escribes en la ventana «Producto o Servicio» del
+  portal.
+- Guardas el precio final, lo que paga el cliente, y la extensión lo ajusta al documento. Si
+  el producto es gravado, en la **Factura** va tal cual (con el IVA incluido) y en el
+  **Crédito Fiscal** va sin IVA (÷ 1.13), porque el portal lo suma después. Los productos
+  exentos o no sujetos llevan el mismo precio en los dos.
+- Respaldo en JSON para llevarte tus clientes y productos a otra computadora.
 - Avisa cuando a un cliente le falta algo para poder recibir un crédito fiscal
   (sin NIT ni DUI, o sin NRC).
 
@@ -40,6 +47,12 @@ extensión aporta esa pieza sin que tengas que cambiar de sistema ni pagar una s
    la extensión lee lo que está en pantalla y te abre el formulario ya lleno para que
    solo revises y guardes.
 
+4. Para un producto: guárdalo una vez en la pestaña **Productos** del icono. Luego, en el
+   portal, abre **Agregar Ítem** (o **Agregar Detalle**) → **Producto o Servicio** y empieza
+   a escribir en **Producto** o **Código**. Debajo aparecen tus productos guardados que
+   coinciden; elige uno con el ratón o con `↓` y `Enter`, y la ventana se rellena entera (se
+   respeta la cantidad que ya hayas escrito). Revisa y pulsa **Agregar ítem**.
+
 Atajos dentro del popup: `/` enfoca el buscador, `↑`/`↓` recorren la lista,
 `Enter` rellena el cliente marcado, `Esc` sale de la edición.
 
@@ -56,8 +69,11 @@ Ver [PRIVACY.md](PRIVACY.md).
 
 ## Limitaciones conocidas
 
-- Solo cubre el **receptor** de Factura y Crédito Fiscal. Los productos y el resto de tipos
-  de documento quedan fuera por ahora.
+- Solo cubre el **receptor** y los **ítems de producto o servicio** de Factura y Crédito
+  Fiscal. «Monto No Afecto», «Otros tipos de impuesto», los descuentos y el resto de tipos de
+  documento quedan fuera por ahora.
+- Antes de rellenar, la extensión vuelve a validar el producto elegido. Si un dato guardado
+  no es válido (por ejemplo, un precio negativo), no rellena nada y te dice qué corregir.
 - La actividad económica se elige simulando la búsqueda en el desplegable del portal. Si el
   código no aparece en su lista, la extensión te avisa y te deja copiarlo para ponerlo a mano.
 - Los códigos de municipio y distrito se **aprenden** de la propia página. Al principio el

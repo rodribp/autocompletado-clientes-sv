@@ -14,6 +14,9 @@ import type { Customer } from '../common/types.js';
 import { captureRecipient, harvestCatalog } from './forms/capture.js';
 import { detectFormType, recipientRoot, q } from './forms/detect.js';
 import { FillError, fillRecipient, schemaFor } from './forms/fill.js';
+import { installSuggestions } from './suggest.js';
+
+installSuggestions();
 
 chrome.runtime.onMessage.addListener(
   respondAsync(async (message: Envelope<string, unknown>): Promise<Res<unknown>> => {

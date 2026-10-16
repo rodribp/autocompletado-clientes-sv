@@ -1,6 +1,7 @@
 // `format*` helpers are display-only: the portal receives raw digits and adds the dashes itself.
 
-import type { DocType } from './types.js';
+import type { FormType } from './messages.js';
+import type { DocType, Product } from './types.js';
 
 export function parseDigits(value: string | null | undefined): string {
   return (value ?? '').replace(/\D+/g, '');
@@ -66,4 +67,31 @@ export function parseActivityLabel(label: string): { code: string; description: 
 
 export function activityLabel(a: { code: string; description: string }): string {
   return `${a.code} - ${a.description}`;
+}
+
+// The pop-up's `precio` mask is `separator.8`: up to 8 decimals.
+const PRICE_DECIMALS = 8;
+const IVA = 1.13;
+
+// Typed prices: `5`, `5,50` (decimal comma) or `$1,234.50` (comma as thousands separator).
+export function parsePrice(raw: string | null | undefined): number | null {
+  let s = (raw ?? '').replace(/[\s$]/g, '');
+  s = s.includes('.') ? s.replace(/,/g, '') : s.replace(',', '.');
+  if (!/^\d+(\.\d{1,8})?$/.test(s)) return null;
+  const price = Number(s);
+  return price > 0 ? price : null;
+}
+
+// CCF expects the price without IVA, because the portal adds it to the subtotal itself.
+export function unitPriceFor(p: Pick<Product, 'price' | 'saleType'>, formType: FormType): string {
+  return formatAmount(formType === 'ccf' && p.saleType === 'G' ? p.price / IVA : p.price);
+}
+
+// As the portal's `separator.8` fields take it: no float noise, no trailing zeros, no exponent.
+export function formatAmount(n: number): string {
+  return n.toFixed(PRICE_DECIMALS).replace(/0+$/, '').replace(/\.$/, '');
+}
+
+export function formatPrice(price: number): string {
+  return `$${price.toFixed(2)}`;
 }

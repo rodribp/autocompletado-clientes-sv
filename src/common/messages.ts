@@ -1,5 +1,5 @@
 import type { CatalogDelta } from './catalog.js';
-import type { Customer } from './types.js';
+import type { Customer, Product } from './types.js';
 
 export const PROTOCOL_VERSION = 1;
 
@@ -18,6 +18,8 @@ export type ErrCode =
   | 'PAGE_NOT_SUPPORTED'
   | 'PAGE_NOT_READY'
   | 'RECIPIENT_ROOT_MISSING'
+  | 'ITEM_MODAL_MISSING'
+  | 'INVALID_PRODUCT'
   | 'NO_TAB'
   | 'TIMEOUT'
   | 'BAD_REQUEST'
@@ -39,7 +41,14 @@ export type FieldKey =
   | 'district'
   | 'details'
   | 'email'
-  | 'phone';
+  | 'phone'
+  | 'itemType'
+  | 'quantity'
+  | 'unit'
+  | 'code'
+  | 'description'
+  | 'saleType'
+  | 'price';
 
 export type SkipReason =
   | 'CONTROL_NOT_FOUND'
@@ -102,6 +111,7 @@ export type ToBackgroundMap = {
   // Unused for now: reserved for future in-page autocomplete.
   QUERY_CUSTOMERS: { req: { q: string; limit?: number }; res: Customer[] };
   GET_CUSTOMER: { req: { id: string }; res: Customer | null };
+  QUERY_PRODUCTS: { req: { q: string; limit?: number }; res: Product[] };
   PUT_CATALOG: { req: CatalogDelta; res: Record<string, never> };
 };
 
